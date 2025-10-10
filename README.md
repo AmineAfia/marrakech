@@ -12,7 +12,6 @@ Marrakech provides TypeScript/JavaScript developers with a structured approach t
 - **Code as Source of Truth**: Prompts live in your codebase with full Git integration and CI/CD workflows  
 - **A Prompt linter**: MArrakech helps developers and coding agents build prompts following the guidlines of the LLM providers
 
-
 **Essential for AI Coding Agents**: Cursor, GitHub Copilot, Claude Code, and other AI coding assistants generate better, more maintainable prompt code when using Marrakech's structured approach. The fluent API, type safety, and clear patterns make it easier for AI agents to write correct, version-controlled prompt systems.
 
 ## Installation
