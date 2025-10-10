@@ -1,4 +1,4 @@
-import { PromptBuilder, tool } from "marrakech";
+import { PromptBuilder, tool } from "marrakech-sdk";
 import { z } from "zod";
 
 // Define tools with AI SDK pattern

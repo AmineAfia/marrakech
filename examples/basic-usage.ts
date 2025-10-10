@@ -1,4 +1,4 @@
-import { PromptBuilder } from "marrakech";
+import { PromptBuilder } from "marrakech-sdk";
 
 // Basic prompt building
 const prompt = new PromptBuilder({ name: "customer-support" })

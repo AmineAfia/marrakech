@@ -1,7 +1,7 @@
 // Example: Vercel AI SDK Integration
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { PromptBuilder, tool } from "marrakech";
+import { PromptBuilder, tool } from "marrakech-sdk";
 import { z } from "zod";
 
 // Define your prompt with tools

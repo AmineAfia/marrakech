@@ -17,7 +17,7 @@ Marrakech provides TypeScript/JavaScript developers with a structured approach t
 ## Installation
 
 ```bash
-npm install marrakech zod
+npm install marrakech-sdk zod
 ```
 
 ## Quick Start
@@ -25,7 +25,7 @@ npm install marrakech zod
 ### Basic Usage
 
 ```typescript
-import { PromptBuilder } from 'marrakech';
+import { PromptBuilder } from 'marrakech-sdk';
 
 const prompt = new PromptBuilder({ name: 'support-agent' })
   .withPersona('You are a helpful customer service agent')
@@ -43,7 +43,7 @@ const systemPrompt = prompt.compile();
 ### Tool Integration
 
 ```typescript
-import { PromptBuilder, tool } from 'marrakech';
+import { PromptBuilder, tool } from 'marrakech-sdk';
 import { z } from 'zod';
 
 // Define a tool with AI SDK pattern
@@ -70,7 +70,7 @@ const { systemPrompt, tools } = prompt.compile('openai');
 ```typescript
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { PromptBuilder } from 'marrakech';
+import { PromptBuilder } from 'marrakech-sdk';
 
 const prompt = new PromptBuilder({ name: 'chat-agent' })
   .withPersona('You are a helpful assistant')
@@ -95,7 +95,7 @@ Perfect for AI coding assistants like Cursor, GitHub Copilot, and Claude Code:
 
 ```typescript
 // AI agents can easily generate structured prompts
-import { PromptBuilder, tool } from 'marrakech';
+import { PromptBuilder, tool } from 'marrakech-sdk';
 import { z } from 'zod';
 
 // AI agents understand this pattern and generate correct code
@@ -131,7 +131,7 @@ Here's how it all comes together in a real application:
 
 ```typescript
 // in app/api/chat/route.ts
-import { PromptBuilder } from 'marrakech';
+import { PromptBuilder } from 'marrakech-sdk';
 import { z } from 'zod';
 import { openai } from './lib/openai';
 import { streamText } from 'ai';
