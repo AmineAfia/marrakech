@@ -1,6 +1,7 @@
 {
   "name": "marrakech-sdk",
-  "version": "0.1.0",
+"version": "0.1.0-alpha.1",
+"description": "Minimal, type-safe tool integration for LLMs",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -9,17 +10,7 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./analyze": {
-        "types": "./dist/analyze.d.ts",
-        "import": "./dist/analyze.js",
-        "require": "./dist/analyze.cjs"
-    },
-    "./optimize": {
-        "types": "./dist/optimize.d.ts",
-        "import": "./dist/optimize.js",
-        "require": "./dist/optimize.cjs"
+    "require": "./dist/index.cjs"
     }
   },
   "files": ["dist", "README.md"],

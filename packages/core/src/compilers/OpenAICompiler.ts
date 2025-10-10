@@ -1,58 +1,57 @@
 import type { PromptBuilder } from "../PromptBuilder.js";
-import type { CompileResult } from "../types.js";
+import type { CoreMessage } from "../types.js";
+import { extractToolMetadata } from "../tools/tool.js";
 import { zodToJsonSchema } from "../schema/zodToJsonSchema.js";
 
-export class OpenAICompiler {
-  compile(promptBuilder: PromptBuilder): CompileResult {
-    const parts: string[] = [];
+/**
+ * Convert PromptBuilder to OpenAI format
+ */
+export function toOpenAI(
+  promptBuilder: PromptBuilder,
+  messages: CoreMessage[] = [],
+): {
+  messages: CoreMessage[];
+  tools?: Array<{ name: string; description: string; parameters: object }>;
+  response_format?: {
+    type: "json_schema";
+    json_schema: { name: string; strict: boolean; schema: object };
+  };
+} {
+  const systemMessage: CoreMessage = {
+    role: "system",
+    content: promptBuilder.systemPrompt,
+  };
 
-    // Add persona
-    const persona = promptBuilder.getPersona();
-    if (persona) {
-      parts.push(persona);
-    }
+  const allMessages = [systemMessage, ...messages];
 
-    // Add rules
-    const rules = promptBuilder.getRules();
-    if (rules.length > 0) {
-      parts.push("\nRules:");
-      for (const rule of rules) {
-        parts.push(`- ${rule}`);
-      }
-    }
-
-    // Add examples
-    const examples = promptBuilder.getExamples();
-    if (examples.length > 0) {
-      parts.push("\nExamples:");
-      for (const example of examples) {
-        parts.push(`User: ${example.user}`);
-        parts.push(`Assistant: ${example.assistant}`);
-      }
-    }
-
-    const systemPrompt = parts.join("\n");
-    const tools = promptBuilder.getTools();
-
-    // Handle output format for OpenAI
-    const outputFormat = promptBuilder.getOutputFormat();
-    let responseFormat = undefined;
-
-    if (outputFormat?.type === "json" && outputFormat.schema) {
-      responseFormat = {
-        type: "json_schema" as const,
-        json_schema: {
-          name: "response",
-          strict: true,
-          schema: zodToJsonSchema(outputFormat.schema),
-        },
-      };
-    }
-
+  // Get tools
+  const tools = promptBuilder.tools.map((tool) => {
+    const metadata = extractToolMetadata(tool);
     return {
-      systemPrompt,
-      tools: tools.length > 0 ? tools : undefined,
-      responseFormat,
+      name: (tool as { name?: string }).name || "unnamed",
+      description: metadata.description,
+      parameters: zodToJsonSchema(metadata.schema),
+    };
+  });
+
+  // Get response format
+  const outputFormat = promptBuilder.outputFormat;
+  let response_format = undefined;
+
+  if (outputFormat?.type === "json" && outputFormat.schema) {
+    response_format = {
+      type: "json_schema" as const,
+      json_schema: {
+        name: "response",
+        strict: true,
+        schema: zodToJsonSchema(outputFormat.schema),
+      },
     };
   }
+
+  return {
+    messages: allMessages,
+    tools: tools.length > 0 ? tools : undefined,
+    response_format,
+  };
 }

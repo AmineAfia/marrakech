@@ -1,10 +1,10 @@
-// Example: Vercel AI SDK Integration
+// Example: Vercel AI SDK Integration with new API
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { PromptBuilder, tool } from "marrakech-sdk";
+import { prompt, tool } from "marrakech-sdk";
 import { z } from "zod";
 
-// Define your prompt with tools
+// Define your prompt with tools using new minimal API
 const getUserDetails = tool({
   description: "Get user account information",
   parameters: z.object({
@@ -12,27 +12,30 @@ const getUserDetails = tool({
   }),
 });
 
-const prompt = new PromptBuilder({ name: "chat-agent" })
-  .withPersona("You are a helpful assistant that can look up user information.")
-  .withRule("Always be helpful and accurate")
-  .withTool(getUserDetails);
+const p = prompt(
+  "You are a helpful assistant that can look up user information.",
+)
+  .system("Always be helpful and accurate")
+  .tool(getUserDetails);
 
 // API Route handler (app/api/chat/route.ts)
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
-    // Prepare messages with system prompt
-    const messagesWithSystem = prompt.prepareMessages(messages);
-
-    // For OpenAI with tools
-    const { systemPrompt, tools } = prompt.compile("openai");
+    // Convert to Vercel AI SDK format
+    const {
+      messages: messagesWithSystem,
+      tools,
+      responseFormat,
+    } = p.toVercelAI(messages);
 
     // Use with Vercel AI SDK streaming
     return streamText({
       model: openai("gpt-4"),
-      messages: [{ role: "system", content: systemPrompt }, ...messages],
+      messages: messagesWithSystem,
       tools: tools,
+      responseFormat: responseFormat,
       toolChoice: "auto",
     });
   } catch (error) {
@@ -41,17 +44,28 @@ export async function POST(req: Request) {
   }
 }
 
-// Alternative: Generic approach (no tools)
-export async function POSTGeneric(req: Request) {
+// Example with structured output
+const pWithOutput = prompt("You are a helpful weather assistant")
+  .tool(getWeather)
+  .output(
+    z.object({
+      temperature: z.number(),
+      conditions: z.string(),
+      location: z.string(),
+    }),
+  );
+
+export async function POSTWithStructuredOutput(req: Request) {
   try {
     const { messages } = await req.json();
 
-    // Simple approach - just add system prompt
-    const messagesWithSystem = prompt.prepareMessages(messages);
+    // This will include responseFormat for structured JSON output
+    const result = pWithOutput.toVercelAI(messages);
 
     return streamText({
       model: openai("gpt-4"),
-      messages: messagesWithSystem,
+      ...result,
+      toolChoice: "auto",
     });
   } catch (error) {
     console.error("Chat API error:", error);
@@ -64,12 +78,13 @@ export async function POSTAnthropic(req: Request) {
   try {
     const { messages } = await req.json();
 
-    // Compile for Anthropic (returns string with XML)
-    const systemPrompt = prompt.compile("anthropic");
+    // Convert to Anthropic format
+    const { system, tools } = p.toAnthropic();
 
     return streamText({
       model: anthropic("claude-3-sonnet"),
-      messages: [{ role: "system", content: systemPrompt }, ...messages],
+      messages: [{ role: "system", content: system }, ...messages],
+      tools: tools,
     });
   } catch (error) {
     console.error("Chat API error:", error);

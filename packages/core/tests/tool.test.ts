@@ -34,7 +34,7 @@ describe("Tool utilities", () => {
     const metadata = extractToolMetadata(getUserDetails);
 
     expect(metadata.description).toBe("Get user details from database");
-    expect(metadata.parameters).toBeDefined();
+    expect(metadata.schema).toBeDefined();
   });
 
   it("should identify non-tool functions", () => {

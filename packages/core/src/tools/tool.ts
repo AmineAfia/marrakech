@@ -9,7 +9,10 @@ export function tool<TParameters extends z.ZodType>(config: {
   description: string;
   parameters?: TParameters; // AI SDK v4 format
   inputSchema?: TParameters; // AI SDK v5 format
-  execute?: (params: z.infer<TParameters>, context?: any) => Promise<any>;
+  execute?: (
+    params: z.infer<TParameters>,
+    context?: unknown,
+  ) => Promise<unknown>;
 }): ToolFunction {
   // Validate that exactly one schema is provided
   if (!config.parameters && !config.inputSchema) {
@@ -35,12 +38,18 @@ export function tool<TParameters extends z.ZodType>(config: {
 /**
  * Type guard to check if a function is a tool function
  */
-export function isToolFunction(fn: any): fn is ToolFunction {
+export function isToolFunction(fn: unknown): fn is ToolFunction {
+  if (fn === null || typeof fn !== "object") {
+    return false;
+  }
+
+  const obj = fn as Record<string, unknown>;
   return (
-    typeof fn === "object" &&
-    typeof fn.description === "string" &&
-    (fn.parameters || fn.inputSchema) &&
-    typeof fn.execute === "function"
+    "description" in obj &&
+    typeof obj.description === "string" &&
+    (obj.parameters !== undefined || obj.inputSchema !== undefined) &&
+    "execute" in obj &&
+    typeof obj.execute === "function"
   );
 }
 
@@ -50,6 +59,7 @@ export function isToolFunction(fn: any): fn is ToolFunction {
 export function extractToolMetadata(toolFn: ToolFunction): {
   description: string;
   schema: z.ZodType;
+  parameters?: z.ZodType;
 } {
   if (!isToolFunction(toolFn)) {
     throw new Error("Invalid tool function: missing required metadata");
@@ -66,5 +76,6 @@ export function extractToolMetadata(toolFn: ToolFunction): {
   return {
     description: toolFn.description,
     schema: schema,
+    parameters: toolFn.parameters,
   };
 }

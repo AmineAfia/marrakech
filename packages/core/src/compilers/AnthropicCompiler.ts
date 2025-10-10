@@ -1,62 +1,38 @@
 import type { PromptBuilder } from "../PromptBuilder.js";
+import { extractToolMetadata } from "../tools/tool.js";
 import { zodToJsonSchema } from "../schema/zodToJsonSchema.js";
 
-export class AnthropicCompiler {
-  compile(promptBuilder: PromptBuilder): string {
-    const parts: string[] = [];
+/**
+ * Convert PromptBuilder to Anthropic format
+ */
+export function toAnthropic(promptBuilder: PromptBuilder): {
+  system: string;
+  tools?: Array<{ name: string; description: string; parameters: object }>;
+} {
+  let systemPrompt = promptBuilder.systemPrompt;
 
-    // Add persona with XML tags
-    if (promptBuilder.getPersona()) {
-      parts.push(`<persona>${promptBuilder.getPersona()}</persona>`);
-    }
-
-    // Add rules with XML tags
-    const rules = promptBuilder.getRules();
-    if (rules.length > 0) {
-      parts.push("<rules>");
-      for (const rule of rules) {
-        parts.push(`- ${rule}`);
-      }
-      parts.push("</rules>");
-    }
-
-    // Add examples with XML tags
-    const examples = promptBuilder.getExamples();
-    if (examples.length > 0) {
-      parts.push("<examples>");
-      for (const example of examples) {
-        parts.push(`User: ${example.user}`);
-        parts.push(`Assistant: ${example.assistant}`);
-      }
-      parts.push("</examples>");
-    }
-
-    // Add tools with XML tags
-    const tools = promptBuilder.getTools();
-    if (tools.length > 0) {
-      parts.push("<tools>");
-      for (const tool of tools) {
-        parts.push(`- ${tool.name}: ${tool.description}`);
-      }
-      parts.push("</tools>");
-    }
-
-    // Add output format with XML tags (Anthropic best practice)
-    const outputFormat = promptBuilder.getOutputFormat();
-    if (outputFormat) {
-      if (outputFormat.type === "json" && outputFormat.schema) {
-        parts.push("<output_format>");
-        parts.push("Respond with valid JSON matching this schema:");
-        const jsonSchema = zodToJsonSchema(outputFormat.schema);
-        parts.push(JSON.stringify(jsonSchema, null, 2));
-        parts.push("</output_format>");
-      } else if (outputFormat.instruction) {
-        parts.push(
-          `<output_format>${outputFormat.instruction}</output_format>`,
-        );
-      }
-    }
-
-    return parts.join("\n");
+  // Add output format instructions for Anthropic (no native structured outputs)
+  const outputFormat = promptBuilder.outputFormat;
+  if (outputFormat && outputFormat.type === "json" && outputFormat.schema) {
+    const jsonSchema = zodToJsonSchema(outputFormat.schema);
+    systemPrompt += `\n\n<output_format>
+Respond with valid JSON matching this schema:
+${JSON.stringify(jsonSchema, null, 2)}
+</output_format>`;
   }
+
+  // Get tools
+  const tools = promptBuilder.tools.map((tool) => {
+    const metadata = extractToolMetadata(tool);
+    return {
+      name: (tool as { name?: string }).name || "unnamed",
+      description: metadata.description,
+      parameters: zodToJsonSchema(metadata.schema),
+    };
+  });
+
+  return {
+    system: systemPrompt,
+    tools: tools.length > 0 ? tools : undefined,
+  };
 }

@@ -1,4 +1,4 @@
-import { PromptBuilder, tool } from "marrakech-sdk";
+import { prompt, tool } from "marrakech-sdk";
 import { z } from "zod";
 
 // Define tools with AI SDK pattern
@@ -39,32 +39,31 @@ const checkOrderStatus = tool({
   },
 });
 
-// Build prompt with tools
-const prompt = new PromptBuilder({ name: "support-agent-with-tools" })
-  .withPersona(
-    "You are a helpful customer service agent with access to user accounts, support tickets, and order information.",
-  )
-  .withRule("Always verify user identity before accessing account information")
-  .withRule("Use the appropriate tool for each request")
-  .withRule("If you cannot help with a request, create a support ticket")
-  .withTool(getUserDetails)
-  .withTool(createSupportTicket)
-  .withTool(checkOrderStatus);
+// Build prompt with tools using new API
+const p = prompt(
+  "You are a helpful customer service agent with access to user accounts, support tickets, and order information.",
+)
+  .system("Always verify user identity before accessing account information")
+  .system("Use the appropriate tool for each request")
+  .system("If you cannot help with a request, create a support ticket")
+  .tool(getUserDetails, createSupportTicket, checkOrderStatus);
 
-// Compile for OpenAI (includes tools separately)
-const { systemPrompt, tools } = prompt.compile("openai");
+// Convert to different formats
+console.log("=== OpenAI Format ===");
+const openaiResult = p.toOpenAI();
+console.log("System Prompt:", openaiResult.messages[0].content);
+console.log("Available Tools:", JSON.stringify(openaiResult.tools, null, 2));
 
-console.log("=== System Prompt ===");
-console.log(systemPrompt);
-
-console.log("\n=== Available Tools ===");
-console.log(JSON.stringify(tools, null, 2));
+console.log("\n=== Anthropic Format ===");
+const anthropicResult = p.toAnthropic();
+console.log("System:", anthropicResult.system);
+console.log("Tools:", JSON.stringify(anthropicResult.tools, null, 2));
 
 // Example of how this would be used with OpenAI API
 console.log("\n=== OpenAI API Usage ===");
 console.log("const response = await openai.chat.completions.create({");
 console.log('  model: "gpt-4",');
-console.log("  messages: messagesWithSystem,");
-console.log("  tools: tools, // The tools array from compile()");
+console.log("  messages: openaiResult.messages,");
+console.log("  tools: openaiResult.tools,");
 console.log('  tool_choice: "auto"');
 console.log("});");
