@@ -1,56 +1,138 @@
-# promptsystem
-## 1. Core Mission
-To transform prompt engineering from a craft into a structured, testable, and data-driven discipline. We will provide developers with a code-first SDK that makes building, managing, and optimizing system prompts as rigorous and professional as the rest of their software stack.
+# Marrakech SDK
 
-## 2. Target Audience (MVP)
-TypeScript/JavaScript developers building modern, full-stack AI applications, starting within the Next.js / Vercel ecosystem.
+> Transform prompt engineering from a craft into a structured, testable, and data-driven discipline.
 
-## 3. Core Design Principles
-- Developer-Native: The primary interface is code. The SDK must feel like a natural, idiomatic part of the TypeScript ecosystem.
-- Code as the Source of Truth: The prompt's definition lives in the developer's codebase, enabling version control with Git and integration into existing CI/CD workflows.
-- Progressive Enhancement: The local SDK must be incredibly useful on its own. The cloud service (analytics, evals) will be a powerful, optional layer on top.
+A code-first SDK that makes building, managing, and optimizing system prompts as rigorous and professional as the rest of your software stack.
 
-# MVP SDK Functionalities (npm install system-prompt)
-This is the lean, local-first version you can ship in the coming days. It has no backend dependency.
+## Core Mission
 
-## A. The PromptBuilder Class
-The fluent, chainable interface for constructing a prompt object.
+Marrakech provides TypeScript/JavaScript developers with a structured approach to prompt engineering, enabling:
 
-- new PromptBuilder({ name: string })
-  - Initializes a new prompt. The name is crucial for future analytics.
-- .withPersona(string)
-  - Adds the core persona/instruction block.
-- .withRule(string)
-  - Adds a single rule. Can be called multiple times.
-- .withExample({ user: string, assistant: string })
-  - Adds a few-shot example to guide the model.
+- **Developer-Native**: Code-first interface that feels natural in the TypeScript ecosystem
+- **Code as Source of Truth**: Prompts live in your codebase with full Git integration and CI/CD workflows  
+- **A Prompt linter**: MArrakech helps developers and coding agents build prompts following the guidlines of the LLM providers
 
-## B. The Killer Feature: TypeScript-Native Tool Integration
-- .withTool({ name: string, description: string, schema: ZodSchema })
-  - This is the core MVP "wow" feature.
-  - It accepts a zod schema directly.
-  - Internally, it introspects the Zod schema and generates the precise JSON schema that LLMs like GPT and Claude require for function calling/tool use. This saves developers an enormous amount of tedious, error-prone work.
 
-## C. The Compiler & Linter
-- .compile(): string
-  - Takes all the structured parts and returns a single, perfectly formatted string ready for the LLM API.
-  - Built-in Linter: On compile, it should run a few basic, high-value checks and console.warn if issues are found:
-    - Token Count: Warn if the compiled prompt is excessively long.
-    - Tool Description Check: Warn if a tool is added with an empty or very short description.
+**Essential for AI Coding Agents**: Cursor, GitHub Copilot, Claude Code, and other AI coding assistants generate better, more maintainable prompt code when using Marrakech's structured approach. The fluent API, type safety, and clear patterns make it easier for AI agents to write correct, version-controlled prompt systems.
 
-## D. Vercel AI SDK Compatibility (The "Growth Hack")
-- .compile(): string
-  - Returns the compiled system prompt as a string, ready to be used with any LLM API.
-- .prepareMessages(conversationMessages: Message[]): Message[]
-  - Takes conversation messages and returns a properly formatted messages array with the system prompt prepended.
-  - Works seamlessly with Vercel AI SDK's existing streaming patterns.
-  - This makes adoption for the target audience almost frictionless while maintaining full SDK compatibility.
+## Installation
 
-## How it All Comes Together (MVP Example)
+```bash
+npm install @marrakech/core zod
+```
+
+## Quick Start
+
+### Basic Usage
+
+```typescript
+import { PromptBuilder } from '@marrakech/core';
+
+const prompt = new PromptBuilder({ name: 'support-agent' })
+  .withPersona('You are a helpful customer service agent')
+  .withRule('Always be polite and professional')
+  .withRule('If you don\'t know something, say so')
+  .withExample({
+    user: 'I need help with my order',
+    assistant: 'I\'d be happy to help you with your order. Can you provide your order number?'
+  });
+
+// Compile for any provider
+const systemPrompt = prompt.compile();
+```
+
+### Tool Integration
+
+```typescript
+import { PromptBuilder, tool } from '@marrakech/core';
+import { z } from 'zod';
+
+// Define a tool with AI SDK pattern
+const getUserDetails = tool({
+  description: 'Fetch user account information from database',
+  parameters: z.object({
+    userId: z.string().describe('User ID to lookup')
+  }),
+  execute: async ({ userId }) => {
+    return await db.users.findById(userId);
+  }
+});
+
+const prompt = new PromptBuilder({ name: 'support-agent' })
+  .withPersona('You are a helpful customer service agent')
+  .withTool(getUserDetails);
+
+// OpenAI format (includes tools separately)
+const { systemPrompt, tools } = prompt.compile('openai');
+```
+
+### Vercel AI SDK Integration
+
+```typescript
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { PromptBuilder } from '@marrakech/core';
+
+const prompt = new PromptBuilder({ name: 'chat-agent' })
+  .withPersona('You are a helpful assistant')
+  .withRule('Be concise and helpful');
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  
+  // Prepare messages with system prompt
+  const messagesWithSystem = prompt.prepareMessages(messages);
+  
+  return streamText({
+    model: openai('gpt-4'),
+    messages: messagesWithSystem
+  });
+}
+```
+
+### AI Coding Agents Integration
+
+Perfect for AI coding assistants like Cursor, GitHub Copilot, and Claude Code:
+
+```typescript
+// AI agents can easily generate structured prompts
+import { PromptBuilder, tool } from '@marrakech/core';
+import { z } from 'zod';
+
+// AI agents understand this pattern and generate correct code
+const dataAnalysisTool = tool({
+  description: 'Analyze dataset and return insights',
+  parameters: z.object({
+    dataset: z.string().describe('Dataset to analyze'),
+    metrics: z.array(z.string()).describe('Metrics to compute')
+  }),
+  execute: async ({ dataset, metrics }) => {
+    // Implementation generated by AI agent
+    return await analyzeData(dataset, metrics);
+  }
+});
+
+// Fluent API is intuitive for AI agents to use correctly
+const prompt = new PromptBuilder({ name: 'data-analyst' })
+  .withPersona('You are an expert data analyst')
+  .withRule('Always provide statistical confidence levels')
+  .withTool(dataAnalysisTool);
+```
+
+The structured approach ensures AI agents generate:
+- **Type-safe code** with proper Zod schemas
+- **Version-controlled prompts** that integrate with Git workflows  
+- **Testable components** that can be unit tested
+- **Maintainable patterns** that follow consistent conventions
+- **Model specific formatting** that following the desired formatting from LLM providers
+
+## Complete Working Example
+
+Here's how it all comes together in a real application:
 
 ```typescript
 // in app/api/chat/route.ts
-import { PromptBuilder } from 'system-prompt';
+import { PromptBuilder } from '@marrakech/core';
 import { z } from 'zod';
 import { openai } from './lib/openai';
 import { streamText } from 'ai';
@@ -85,275 +167,90 @@ export async function POST(req: Request) {
 }
 ```
 
-This MVP provides immediate, tangible value by cleaning up code, automating schema generation, and simplifying a common workflow, all while living entirely within the developer's local project. It is the perfect foundation to build the cloud-based analytics and eval features upon later.
+This provides immediate, tangible value by cleaning up code, automating schema generation, and simplifying a common workflow, all while living entirely within your local project.
 
----
+## Why AI Coding Agents Love Marrakech
 
-## Installation
+When AI coding assistants like Cursor, GitHub Copilot, or Claude Code work with Marrakech, they generate:
 
-```bash
-npm i -D system-prompt
-# or just use npx in the CLI commands below
+### 🎯 **Predictable Patterns**
+```typescript
+// AI agents consistently generate this structure
+const prompt = new PromptBuilder({ name: 'agent-name' })
+  .withPersona('Clear role definition')
+  .withRule('Specific constraint')
+  .withTool(wellTypedTool);
 ```
 
-## Quickstart
-
-### Option A: You already have a system prompt string
-
+### 🔒 **Type-Safe Code**
 ```typescript
-// prompts/support.prompt.ts
-export const systemPrompt = `
-You are a helpful customer service agent.
-Always be polite and professional.
-If you don't know something, say so.
-`;
+// AI agents understand Zod schemas and generate correct types
+const tool = tool({
+  description: 'Clear, specific description',
+  parameters: z.object({
+    param: z.string().describe('Clear parameter description')
+  })
+});
 ```
 
-### Option B: Use the PromptBuilder
+### 📝 **Version-Controlled Prompts**
+- AI agents generate code that lives in your Git repository
+- Changes are tracked, reviewed, and rolled back like any other code
+- No more prompt strings scattered across files
 
+### 🧪 **Testable Components**
 ```typescript
-// prompts/support.prompt.ts
-import { PromptBuilder } from 'system-prompt';
-
-export const prompt = new PromptBuilder({ name: 'customer-support' })
-  .withPersona('You are a helpful customer service agent.')
-  .withRule('Always be polite and professional.')
-  .withRule("If you don't know something, say so.");
-```
-
-### Runtime (production) with Vercel AI SDK
-
-Use your compiled prompt with Vercel's streaming. Do not run analysis/optimization at runtime.
-
-```typescript
-// app/api/chat/route.ts
-import { streamText } from 'ai';
-import { openai } from '@/lib/openai';
-import { prompt } from '@/prompts/support.prompt';
-
-export async function POST(req: Request) {
-  const { messages } = await req.json();
-
-  const system = typeof prompt?.compile === 'function'
-    ? prompt.compile()
-    : String(prompt); // fallback if you exported a raw string
-
-  const messagesWithSystem = prompt.prepareMessages(messages);
-
-  return streamText({
-    model: openai('gpt-4o'),
-    messages: messagesWithSystem
+// AI agents can generate unit tests for prompts
+describe('Customer Support Prompt', () => {
+  it('should compile without errors', () => {
+    expect(() => prompt.compile()).not.toThrow();
   });
-}
+});
 ```
 
-## CLI Workflows (local and CI)
+## Key Features
 
-- Analysis (instant feedback on an existing prompt)
+- **Fluent API**: Chainable methods for building prompts (`withPersona`, `withRule`, `withExample`, `withTool`)
+- **TypeScript-Native Tools**: Define tools with Zod schemas and automatic JSON Schema conversion
+- **Multi-Provider Support**: Compile for OpenAI, Anthropic, or generic formats
+- **Built-in Linting**: Automatic validation, token counting, and cost estimation
+- **Vercel AI SDK Compatible**: Seamless integration with existing streaming workflows
+- **AI Coding Agent Optimized**: Clear patterns and type safety help Cursor, Copilot, and Claude Code generate better prompt code
+
+## Documentation & Examples
+
+- **[Full API Reference](packages/core/README.md)** - Complete documentation for the core package
+- **[Examples Directory](examples/)** - Working examples for basic usage, tool integration, and Vercel AI SDK
+- **[Core Package](packages/core/)** - The main `@marrakech/core` package with all functionality
+
+## Development
+
+This is a Turborepo monorepo with the following structure:
+
+```
+/
+├── packages/core/          # @marrakech/core - Main SDK package
+├── examples/              # Usage examples
+└── docs/                  # Documentation
+```
+
+### Local Development
 
 ```bash
-npx system-prompt analyze prompts/support.prompt.ts \
-  --report reports/support.analysis.json
+# Install dependencies
+pnpm install
+
+# Start development
+turbo dev
+
+# Build all packages
+turbo build
+
+# Run tests
+turbo test
 ```
 
-- Generate few-shot examples from your dataset
+## Roadmap
 
-```bash
-npx system-prompt examples \
-  --dataset data/support.json \
-  --count 5 \
-  --out prompts/support.examples.json
-```
+The current implementation provides a solid foundation for structured prompt engineering. Future improvements will include advanced analysis capabilities, optimization tools, and evaluation frameworks to make prompt engineering a science instead of an art.
 
-- Optimize your prompt against your dataset
-
-```bash
-npx system-prompt optimize prompts/support.prompt.ts \
-  --dataset data/support.json \
-  --metrics accuracy \
-  --budget 50 \
-  --out prompts/support.optimized.ts \
-  --report reports/support.optimization.json
-```
-
-- Evaluate prompt performance
-
-```bash
-npx system-prompt eval prompts/support.optimized.ts \
-  --dataset data/support.json \
-  --metrics accuracy \
-  --report reports/support.eval.json
-```
-
-- CI guardrail (fail on regression)
-
-```bash
-npx system-prompt ci-check \
-  --dataset data/support.json \
-  --prompt prompts/support.optimized.ts \
-  --baseline reports/support.eval.baseline.json \
-  --assert "accuracy>=0.85" \
-  --report reports/support.eval.ci.json
-```
-
-Optionally update your baseline (intentional improvement):
-
-```bash
-npx system-prompt ci-update-baseline \
-  --from reports/support.eval.ci.json \
-  --to reports/support.eval.baseline.json
-```
-
-## Recommended Project Structure
-
-```
-prompts/
-  support.prompt.ts          # string or PromptBuilder
-  support.examples.json      # auto-generated few-shots (optional)
-  support.optimized.ts       # auto-generated best prompt (optional)
-data/
-  support.json               # eval/optimization dataset
-reports/
-  support.analysis.json
-  support.optimization.json
-  support.eval.json
-  support.eval.baseline.json
-system-prompt.config.ts      # models, metrics, budgets, embeddings
-```
-
-## Configuration (system-prompt.config.ts)
-
-```typescript
-// system-prompt.config.ts
-import { accuracyMetric } from 'system-prompt/metrics';
-import { vercelModelCaller } from 'system-prompt/adapters/vercel';
-
-export default {
-  model: vercelModelCaller({ provider: 'openai', model: 'gpt-4o-mini' }),
-  metrics: [accuracyMetric()],
-  embeddings: null, // or inject an embedder adapter for semantic selection
-  budgets: {
-    optimize: { maxIterations: 5, candidatesPerIter: 4 }
-  }
-};
-```
-
-## API Reference (brief)
-
-### PromptBuilder
-- `new PromptBuilder({ name: string })`
-- `.withPersona(string)`
-- `.withRule(string)`
-- `.withExample({ user: string, assistant: string })`
-- `.withTool({ name: string, description: string, schema: ZodSchema })`
-- `.compile(): string`
-- `.prepareMessages(conversationMessages: Message[]): Message[]`
-
-### Analyzer / Examples / Evaluator / Optimizer
-
-```typescript
-// Analyze an existing prompt string
-analyzePrompt(prompt: string): AnalysisReport
-
-// Curate few-shot examples from your data
-generateFewShotExamples(
-  data: DatasetExample[],
-  opts: { count: number; task?: string; embed?: Embedder }
-): Array<{ user: string; assistant: string }>
-
-// Evaluate a prompt against a dataset
-evaluatePrompt(
-  systemPrompt: string,
-  dataset: DatasetExample[],
-  model: ModelCaller,
-  metrics: Metric[]
-): Promise<{ aggregate: number; perExample: Array<{ id: number; score: number }> }>
-
-// Optimize a prompt with a small search over candidates
-optimizePrompt(
-  basePrompt: string,
-  opts: {
-    dataset: DatasetExample[];
-    model: ModelCaller;
-    metrics: Metric[];
-    embed?: Embedder;
-    maxIterations?: number;
-    candidatesPerIter?: number;
-  }
-): Promise<{ prompt: string; report: OptimizationReport }>
-```
-
-### Core Types
-
-```typescript
-type ModelCaller = (args: {
-  messages: Array<{ role: 'system'|'user'|'assistant', content: string }>;
-}) => Promise<{ output: string }>;
-
-type DatasetExample = {
-  input: string;
-  idealOutput?: string;
-  context?: string;
-  tags?: string[];
-};
-
-type Metric = (args: {
-  input: string; output: string; idealOutput?: string; context?: string;
-}) => number; // 0..1
-
-type OptimizationReport = {
-  baselineScore: number;
-  bestScore: number;
-  iterations: number;
-  changes: string[];
-  chosenExamples?: Array<{ user: string; assistant: string }>;
-};
-
-type AnalysisReport = {
-  issues: Array<{ ruleId: string; severity: 'info'|'warn'|'error'; message: string }>;
-  score: number; // 0..10
-  suggestions: string[];
-};
-```
-
-## Implementation Overview
-
-- **PromptAnalyzer**: Heuristics and token checks; returns issues, score, suggestions.
-- **ExampleGenerator**: Selects diverse, high-signal few-shots via embeddings/MMR (fallback to lexical).
-- **PromptEvaluator**: Runs your `ModelCaller` across a dataset and computes metrics.
-- **PromptOptimizer**: Iteratively generates candidates (persona/rules/examples tweaks), evaluates, and selects the best under a small budget.
-- **Vercel Integration**: Keep streaming as-is; only prepare messages and compile prompts. All heavy work (analyze/examples/optimize/eval) runs locally or in CI via the CLI.
-
-## When to Run What
-
-- **Local dev / CI**: `analyze`, `examples`, `optimize`, `eval`, `ci-check`, `ci-update-baseline`.
-- **Runtime (production)**: only `compile()` and `prepareMessages()` with Vercel AI SDK.
-
----
-
-## Prompt Analysis
-
-The `analyzePrompt()` function provides instant feedback on system prompts through static checks and scoring:
-
-### Key Checks
-- Role/persona specificity and clarity
-- Task objective and constraints
-- Output format requirements
-- Few-shot example quality
-- Tool usage consistency  
-- Safety guardrails
-- Language clarity
-- Token budget
-
-### Scoring
-Returns a 0-10 score based on weighted criteria like persona (1), objectives (1), constraints (2), examples (2), tools (1), safety (1), and clarity (2).
-
-### Output
-Returns an `AnalysisReport` with:
-- Issues found (rule ID, severity, message)
-- Overall score
-- Actionable suggestions for improvement
-
-Can optionally run LLM-assisted critique and micro-eval with provided dataset and model caller.
-
-See [Prompt Analysis Design](docs/analyzePrompt.md) for full details.
