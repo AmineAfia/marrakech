@@ -1,4 +1,4 @@
-# @marrakech/core
+# marrakech-sdk
 
 A structured, testable, and data-driven prompt engineering SDK for TypeScript/JavaScript applications.
 
@@ -13,7 +13,7 @@ A structured, testable, and data-driven prompt engineering SDK for TypeScript/Ja
 ## Installation
 
 ```bash
-npm install @marrakech/core zod
+npm install marrakech-sdk zod
 ```
 
 ## Quick Start
@@ -21,7 +21,7 @@ npm install @marrakech/core zod
 ### Basic Usage
 
 ```typescript
-import { PromptBuilder } from '@marrakech/core';
+import { PromptBuilder } from 'marrakech-sdk';
 
 const prompt = new PromptBuilder({ name: 'support-agent' })
   .withPersona('You are a helpful customer service agent')
@@ -39,7 +39,7 @@ const systemPrompt = prompt.compile();
 ### With Tools (AI SDK Style)
 
 ```typescript
-import { PromptBuilder, tool } from '@marrakech/core';
+import { PromptBuilder, tool } from 'marrakech-sdk';
 import { z } from 'zod';
 
 // Define a tool with AI SDK pattern
@@ -66,7 +66,7 @@ const { systemPrompt, tools } = prompt.compile('openai');
 ```typescript
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { PromptBuilder } from '@marrakech/core';
+import { PromptBuilder } from 'marrakech-sdk';
 
 const prompt = new PromptBuilder({ name: 'chat-agent' })
   .withPersona('You are a helpful assistant')
@@ -106,7 +106,7 @@ new PromptBuilder({ name: string })
 ### Tool Helper
 
 ```typescript
-import { tool } from '@marrakech/core';
+import { tool } from 'marrakech-sdk';
 
 const myTool = tool({
   description: 'Tool description',
