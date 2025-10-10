@@ -1,4 +1,5 @@
 import type { PromptBuilder } from "../PromptBuilder.js";
+import { zodToJsonSchema } from "../schema/zodToJsonSchema.js";
 
 export class GenericCompiler {
   compile(promptBuilder: PromptBuilder): string {
@@ -35,6 +36,20 @@ export class GenericCompiler {
       parts.push("\nTools:");
       for (const tool of tools) {
         parts.push(`- ${tool.name}: ${tool.description}`);
+      }
+    }
+
+    // Add output format
+    const outputFormat = promptBuilder.getOutputFormat();
+    if (outputFormat) {
+      if (outputFormat.type === "json" && outputFormat.schema) {
+        parts.push("\nOutput Format:");
+        parts.push("Respond with valid JSON matching this schema:");
+        const jsonSchema = zodToJsonSchema(outputFormat.schema);
+        parts.push(JSON.stringify(jsonSchema, null, 2));
+      } else if (outputFormat.instruction) {
+        parts.push("\nOutput Format:");
+        parts.push(outputFormat.instruction);
       }
     }
 

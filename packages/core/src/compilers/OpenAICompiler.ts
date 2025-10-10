@@ -1,5 +1,6 @@
 import type { PromptBuilder } from "../PromptBuilder.js";
 import type { CompileResult } from "../types.js";
+import { zodToJsonSchema } from "../schema/zodToJsonSchema.js";
 
 export class OpenAICompiler {
   compile(promptBuilder: PromptBuilder): CompileResult {
@@ -33,9 +34,25 @@ export class OpenAICompiler {
     const systemPrompt = parts.join("\n");
     const tools = promptBuilder.getTools();
 
+    // Handle output format for OpenAI
+    const outputFormat = promptBuilder.getOutputFormat();
+    let responseFormat = undefined;
+
+    if (outputFormat?.type === "json" && outputFormat.schema) {
+      responseFormat = {
+        type: "json_schema" as const,
+        json_schema: {
+          name: "response",
+          strict: true,
+          schema: zodToJsonSchema(outputFormat.schema),
+        },
+      };
+    }
+
     return {
       systemPrompt,
       tools: tools.length > 0 ? tools : undefined,
+      responseFormat,
     };
   }
 }

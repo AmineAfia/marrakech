@@ -5,11 +5,13 @@ import type {
   PromptBuilderOptions,
   Example,
   Provider,
+  OutputFormat,
 } from "./types.js";
 import { extractToolMetadata } from "./tools/tool.js";
 import { zodToJsonSchema } from "./schema/zodToJsonSchema.js";
 import { getCompiler } from "./compilers/CompilerFactory.ts";
 import { PromptLinter } from "./linter/PromptLinter.ts";
+import type { z } from "zod";
 
 export class PromptBuilder {
   private name: string;
@@ -17,6 +19,7 @@ export class PromptBuilder {
   private rules: string[] = [];
   private examples: Example[] = [];
   private tools: ToolFunction[] = [];
+  private outputFormat?: OutputFormat;
 
   constructor(options: PromptBuilderOptions) {
     this.name = options.name;
@@ -55,8 +58,51 @@ export class PromptBuilder {
   }
 
   /**
+   * Add multiple rules at once
+   */
+  withRules(rules: string[]): this {
+    this.rules.push(...rules);
+    return this;
+  }
+
+  /**
+   * Add multiple examples at once
+   */
+  withExamples(examples: Example[]): this {
+    this.examples.push(...examples);
+    return this;
+  }
+
+  /**
+   * Add multiple tools at once
+   */
+  withTools(tools: ToolFunction[]): this {
+    this.tools.push(...tools);
+    return this;
+  }
+
+  /**
+   * Set output format for structured responses
+   */
+  withOutputFormat(format: OutputFormat): this {
+    this.outputFormat = format;
+    return this;
+  }
+
+  /**
+   * Convenience method for JSON schema output
+   */
+  withJsonOutput(schema: z.ZodType): this {
+    this.outputFormat = { type: "json", schema };
+    return this;
+  }
+
+  /**
    * Compile the prompt for a specific provider
    */
+  compile(provider?: "generic"): string;
+  compile(provider: "openai"): CompileResult;
+  compile(provider: "anthropic"): string;
   compile(provider: Provider = "generic"): string | CompileResult {
     // Run linter
     const linter = new PromptLinter();
@@ -71,8 +117,8 @@ export class PromptBuilder {
       }
     }
 
-      // Get appropriate compiler
-      const compiler = getCompiler(provider);
+    // Get appropriate compiler
+    const compiler = getCompiler(provider);
 
     // Compile based on provider
     if (provider === "openai") {
@@ -104,18 +150,18 @@ export class PromptBuilder {
     // Check if system message already exists
     const hasSystemMessage = messages.some((msg) => msg.role === "system");
 
-      if (hasSystemMessage) {
-        // Replace existing system message
-        return messages.map((msg) =>
-          msg.role === "system" ? ({ ...msg, content: systemPrompt } as T) : msg,
-        );
-      }
-      // Prepend system message
-      const systemMessage = {
-        role: "system" as const,
-        content: systemPrompt,
-      } as T;
-      return [systemMessage, ...messages];
+    if (hasSystemMessage) {
+      // Replace existing system message
+      return messages.map((msg) =>
+        msg.role === "system" ? ({ ...msg, content: systemPrompt } as T) : msg,
+      );
+    }
+    // Prepend system message
+    const systemMessage = {
+      role: "system" as const,
+      content: systemPrompt,
+    } as T;
+    return [systemMessage, ...messages];
   }
 
   // Getters for internal use by compilers
@@ -139,10 +185,14 @@ export class PromptBuilder {
     return this.tools.map((tool) => {
       const metadata = extractToolMetadata(tool);
       return {
-        name: tool.name || "unnamed",
+        name: (tool as { name?: string }).name || "unnamed",
         description: metadata.description,
-        parameters: zodToJsonSchema(metadata.parameters),
+        parameters: zodToJsonSchema(metadata.schema),
       };
     });
+  }
+
+  getOutputFormat(): OutputFormat | undefined {
+    return this.outputFormat;
   }
 }

@@ -1,4 +1,5 @@
 import type { PromptBuilder } from "../PromptBuilder.js";
+import { zodToJsonSchema } from "../schema/zodToJsonSchema.js";
 
 export class AnthropicCompiler {
   compile(promptBuilder: PromptBuilder): string {
@@ -38,6 +39,22 @@ export class AnthropicCompiler {
         parts.push(`- ${tool.name}: ${tool.description}`);
       }
       parts.push("</tools>");
+    }
+
+    // Add output format with XML tags (Anthropic best practice)
+    const outputFormat = promptBuilder.getOutputFormat();
+    if (outputFormat) {
+      if (outputFormat.type === "json" && outputFormat.schema) {
+        parts.push("<output_format>");
+        parts.push("Respond with valid JSON matching this schema:");
+        const jsonSchema = zodToJsonSchema(outputFormat.schema);
+        parts.push(JSON.stringify(jsonSchema, null, 2));
+        parts.push("</output_format>");
+      } else if (outputFormat.instruction) {
+        parts.push(
+          `<output_format>${outputFormat.instruction}</output_format>`,
+        );
+      }
     }
 
     return parts.join("\n");

@@ -11,5 +11,5 @@ export const analyzeComplexity = () => {
 };
 
 export const analyzeEffectiveness = () => {
-  throw new Error('Effectiveness analysis not yet implemented');
+  throw new Error("Effectiveness analysis not yet implemented ✅✅✅✅");
 };
