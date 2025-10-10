@@ -1,5 +1,5 @@
 {
-  "name": "@marrakech/core",
+"name": "marrakech",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -10,6 +10,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./analyze": {
+        "types": "./dist/analyze.d.ts",
+        "import": "./dist/analyze.js",
+        "require": "./dist/analyze.cjs"
+    },
+    "./optimize": {
+        "types": "./dist/optimize.d.ts",
+        "import": "./dist/optimize.js",
+        "require": "./dist/optimize.cjs"
     }
   },
   "files": ["dist", "README.md"],

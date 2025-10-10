@@ -17,7 +17,7 @@ Marrakech provides TypeScript/JavaScript developers with a structured approach t
 ## Installation
 
 ```bash
-npm install @marrakech/core zod
+npm install marrakech zod
 ```
 
 ## Quick Start
@@ -25,7 +25,7 @@ npm install @marrakech/core zod
 ### Basic Usage
 
 ```typescript
-import { PromptBuilder } from '@marrakech/core';
+import { PromptBuilder } from 'marrakech';
 
 const prompt = new PromptBuilder({ name: 'support-agent' })
   .withPersona('You are a helpful customer service agent')
@@ -43,7 +43,7 @@ const systemPrompt = prompt.compile();
 ### Tool Integration
 
 ```typescript
-import { PromptBuilder, tool } from '@marrakech/core';
+import { PromptBuilder, tool } from 'marrakech';
 import { z } from 'zod';
 
 // Define a tool with AI SDK pattern
@@ -70,7 +70,7 @@ const { systemPrompt, tools } = prompt.compile('openai');
 ```typescript
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { PromptBuilder } from '@marrakech/core';
+import { PromptBuilder } from 'marrakech';
 
 const prompt = new PromptBuilder({ name: 'chat-agent' })
   .withPersona('You are a helpful assistant')
@@ -95,7 +95,7 @@ Perfect for AI coding assistants like Cursor, GitHub Copilot, and Claude Code:
 
 ```typescript
 // AI agents can easily generate structured prompts
-import { PromptBuilder, tool } from '@marrakech/core';
+import { PromptBuilder, tool } from 'marrakech';
 import { z } from 'zod';
 
 // AI agents understand this pattern and generate correct code
@@ -131,7 +131,7 @@ Here's how it all comes together in a real application:
 
 ```typescript
 // in app/api/chat/route.ts
-import { PromptBuilder } from '@marrakech/core';
+import { PromptBuilder } from 'marrakech';
 import { z } from 'zod';
 import { openai } from './lib/openai';
 import { streamText } from 'ai';
@@ -181,7 +181,7 @@ This provides immediate, tangible value by cleaning up code, automating schema g
 
 - **[Full API Reference](packages/core/README.md)** - Complete documentation for the core package
 - **[Examples Directory](examples/)** - Working examples for basic usage, tool integration, and Vercel AI SDK
-- **[Core Package](packages/core/)** - The main `@marrakech/core` package with all functionality
+- **[Core Package](packages/core/)** - The main `marrakech` package with all functionality
 
 ## Development
 
@@ -189,7 +189,7 @@ This is a Turborepo monorepo with the following structure:
 
 ```
 /
-├── packages/core/          # @marrakech/core - Main SDK package
+├── packages/core/          # marrakech - Main SDK package
 ├── examples/              # Usage examples
 └── docs/                  # Documentation
 ```
