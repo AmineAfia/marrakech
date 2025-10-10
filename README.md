@@ -169,45 +169,6 @@ export async function POST(req: Request) {
 
 This provides immediate, tangible value by cleaning up code, automating schema generation, and simplifying a common workflow, all while living entirely within your local project.
 
-## Why AI Coding Agents Love Marrakech
-
-When AI coding assistants like Cursor, GitHub Copilot, or Claude Code work with Marrakech, they generate:
-
-### 🎯 **Predictable Patterns**
-```typescript
-// AI agents consistently generate this structure
-const prompt = new PromptBuilder({ name: 'agent-name' })
-  .withPersona('Clear role definition')
-  .withRule('Specific constraint')
-  .withTool(wellTypedTool);
-```
-
-### 🔒 **Type-Safe Code**
-```typescript
-// AI agents understand Zod schemas and generate correct types
-const tool = tool({
-  description: 'Clear, specific description',
-  parameters: z.object({
-    param: z.string().describe('Clear parameter description')
-  })
-});
-```
-
-### 📝 **Version-Controlled Prompts**
-- AI agents generate code that lives in your Git repository
-- Changes are tracked, reviewed, and rolled back like any other code
-- No more prompt strings scattered across files
-
-### 🧪 **Testable Components**
-```typescript
-// AI agents can generate unit tests for prompts
-describe('Customer Support Prompt', () => {
-  it('should compile without errors', () => {
-    expect(() => prompt.compile()).not.toThrow();
-  });
-});
-```
-
 ## Key Features
 
 - **Fluent API**: Chainable methods for building prompts (`withPersona`, `withRule`, `withExample`, `withTool`)
