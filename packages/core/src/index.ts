@@ -9,6 +9,9 @@ export { toGeneric } from "./compilers/GenericCompiler.js";
 export { toOpenAI } from "./compilers/OpenAICompiler.js";
 export { toAnthropic } from "./compilers/AnthropicCompiler.js";
 
+// Linter exports (types only; functionality auto-runs when enabled via env)
+export type { LintFinding, LintSeverity } from "./linter/index.js";
+
 // Schema utilities
 export {
   zodToJsonSchema,

@@ -1,4 +1,5 @@
 import type { PromptBuilder } from "../PromptBuilder.js";
+import { lintPrompt } from "../linter/index.js";
 import { extractToolMetadata } from "../tools/tool.js";
 import { zodToJsonSchema } from "../schema/zodToJsonSchema.js";
 
@@ -30,6 +31,19 @@ ${JSON.stringify(jsonSchema, null, 2)}
       parameters: zodToJsonSchema(metadata.schema),
     };
   });
+
+  // Lint (default-off, env-controlled). Non-blocking: only logs.
+  try {
+    lintPrompt(
+      {
+        provider: "anthropic",
+        system: systemPrompt,
+      },
+      console,
+    );
+  } catch {
+    // Never throw from linter
+  }
 
   return {
     system: systemPrompt,

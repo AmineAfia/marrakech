@@ -85,6 +85,25 @@ Respond with valid JSON matching this schema:
 
 The key insight: **your system prompt stays clean and focused on behavior**, while technical details (tools, schemas) are handled by the API integration layer.
 
+### Prompt Linter (opt-in)
+
+Enable a provider-aware prompt linter without changing your code. It never alters requests; it only logs concise findings. Disabled by default.
+
+```bash
+SDK_PROMPT_LINTER=1 \
+SDK_PROMPT_LINTER_MODE=warn \
+SDK_PROMPT_LINTER_PROVIDER=auto \
+SDK_PROMPT_LINTER_RULES='{"core/asks-for-chain-of-thought":"error"}'
+```
+
+Examples of checks:
+
+- Missing output contract when extraction implied (warn)
+- Undelimited long content (warn)
+- Requesting chain-of-thought (warn)
+- OpenAI: suggest Structured Outputs if asking for JSON (info)
+- Anthropic: suggest simple XML tags for multi-part tasks (info)
+
 ## API Reference
 
 ### `prompt(systemPrompt?: string)`
