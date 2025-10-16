@@ -2,14 +2,29 @@ import type { z } from "zod";
 import type { CoreMessage, ToolFunction, OutputFormat } from "./types.js";
 import { extractToolMetadata } from "./tools/tool.js";
 import { zodToJsonSchema } from "./schema/zodToJsonSchema.js";
+import { AnalyticsClient } from "./analytics/AnalyticsClient.js";
+import {
+  generatePromptId,
+  generateExecutionId,
+  generateSessionId,
+  generateToolCallId,
+  estimateTokens,
+  estimateCost,
+  getCurrentTimestamp,
+} from "./analytics/utils.js";
 
 export class PromptBuilder {
   public systemPrompt: string;
   public tools: ToolFunction[] = [];
   public outputFormat?: OutputFormat;
+  private sessionId: string;
+  private analyticsClient: AnalyticsClient;
+  private static trackedPrompts = new Set<string>();
 
   constructor(systemPrompt?: string) {
     this.systemPrompt = systemPrompt || "";
+    this.sessionId = generateSessionId();
+    this.analyticsClient = AnalyticsClient.getInstance();
   }
 
   /**
@@ -41,6 +56,55 @@ export class PromptBuilder {
   }
 
   /**
+   * Track prompt metadata (called once per unique prompt)
+   */
+  private trackPromptMetadata(promptId: string): void {
+    if (PromptBuilder.trackedPrompts.has(promptId)) return;
+    PromptBuilder.trackedPrompts.add(promptId);
+
+    this.analyticsClient.trackPromptMetadata({
+      prompt_id: promptId,
+      name: `prompt_${promptId.substring(0, 8)}`,
+      description: this.systemPrompt.substring(0, 100),
+      prompt_text: this.systemPrompt,
+      version: "1.0",
+      is_active: 1,
+      account_id: "", // Filled by backend
+      organization_id: "", // Filled by backend
+      updated_at: getCurrentTimestamp(),
+    });
+  }
+
+  /**
+   * Track prompt execution
+   */
+  private trackPromptExecution(
+    executionId: string,
+    promptId: string,
+    messages: CoreMessage[],
+    model = "unknown",
+  ): void {
+    const requestTokens = estimateTokens(JSON.stringify(messages));
+
+    this.analyticsClient.trackPromptExecution({
+      execution_id: executionId,
+      prompt_id: promptId,
+      session_id: this.sessionId,
+      prompt_name: `prompt_${promptId.substring(0, 8)}`,
+      prompt_version: "1.0",
+      execution_time_ms: 0, // Will be updated by the calling method
+      model: model,
+      region: "unknown",
+      request_tokens: requestTokens,
+      response_tokens: 0, // Unknown at SDK level
+      cost_usd: 0, // Unknown at SDK level
+      status: "success",
+      account_id: "", // Filled by backend
+      organization_id: "", // Filled by backend
+    });
+  }
+
+  /**
    * Get tools in OpenAI format (array)
    */
   private getToolsForAPI(): Array<{
@@ -61,14 +125,17 @@ export class PromptBuilder {
   /**
    * Get tools in Vercel AI SDK format (record)
    */
-  private getToolsForVercelAI(): Record<string, unknown> {
+  private getToolsForVercelAI(
+    executionId: string,
+    promptId: string,
+  ): Record<string, unknown> {
     const tools: Record<string, unknown> = {};
     const usedNames = new Set<string>();
 
     for (const tool of this.tools) {
       const metadata = extractToolMetadata(tool);
       let name = (tool as { name?: string }).name || "unnamed";
-      
+
       // Ensure unique names by adding a counter if needed
       if (usedNames.has(name)) {
         let counter = 1;
@@ -79,16 +146,80 @@ export class PromptBuilder {
         }
         name = uniqueName;
       }
-      
+
       usedNames.add(name);
       tools[name] = {
         description: metadata.description,
         inputSchema: zodToJsonSchema(metadata.schema),
-        execute: tool.execute,
+        execute: this.wrapToolExecution(
+          tool.execute,
+          name,
+          executionId,
+          promptId,
+        ),
       };
     }
 
     return tools;
+  }
+
+  /**
+   * Wrap tool execution with analytics tracking
+   */
+  private wrapToolExecution(
+    originalExecute: ((...args: unknown[]) => Promise<unknown>) | undefined,
+    toolName: string,
+    executionId: string,
+    promptId: string,
+  ): ((...args: unknown[]) => Promise<unknown>) | undefined {
+    if (!originalExecute) return undefined;
+
+    return async (...args: unknown[]) => {
+      const context = args[1] as { toolCallId?: string } | undefined;
+      const startTime = Date.now();
+      const toolCallId = context?.toolCallId || generateToolCallId();
+
+      try {
+        const result = await originalExecute(...args);
+
+        // Track successful execution
+        this.analyticsClient.trackToolCall({
+          tool_call_id: toolCallId,
+          execution_id: executionId,
+          prompt_id: promptId,
+          tool_name: toolName,
+          execution_time_ms: Date.now() - startTime,
+          input_tokens: estimateTokens(JSON.stringify(args)),
+          output_tokens: estimateTokens(JSON.stringify(result)),
+          cost_usd: estimateCost(
+            "unknown",
+            estimateTokens(JSON.stringify(args)),
+            estimateTokens(JSON.stringify(result)),
+          ),
+          status: "success",
+          tool_call_timestamp: getCurrentTimestamp(),
+        });
+
+        return result;
+      } catch (error) {
+        // Track failed execution
+        this.analyticsClient.trackToolCall({
+          tool_call_id: toolCallId,
+          execution_id: executionId,
+          prompt_id: promptId,
+          tool_name: toolName,
+          execution_time_ms: Date.now() - startTime,
+          input_tokens: estimateTokens(JSON.stringify(args)),
+          output_tokens: 0,
+          cost_usd: 0,
+          status: "error",
+          error_message: error instanceof Error ? error.message : String(error),
+          tool_call_timestamp: getCurrentTimestamp(),
+        });
+
+        throw error; // Preserve original behavior
+      }
+    };
   }
 
   /**
@@ -129,13 +260,25 @@ export class PromptBuilder {
       json_schema: { name: string; strict: boolean; schema: object };
     };
   } {
+    const executionId = generateExecutionId();
+    const toolNames = this.tools.map(
+      (tool) => (tool as { name?: string }).name || "unnamed",
+    );
+    const promptId = generatePromptId(this.systemPrompt, toolNames);
+
+    // Track prompt metadata (once per unique prompt)
+    this.trackPromptMetadata(promptId);
+
+    // Track prompt execution
+    this.trackPromptExecution(executionId, promptId, messages);
+
     const systemMessage: CoreMessage = {
       role: "system",
       content: this.systemPrompt,
     };
 
     const allMessages = [systemMessage, ...messages];
-    const tools = this.getToolsForVercelAI();
+    const tools = this.getToolsForVercelAI(executionId, promptId);
     const responseFormat = this.getResponseFormat();
 
     return {
@@ -156,6 +299,18 @@ export class PromptBuilder {
       json_schema: { name: string; strict: boolean; schema: object };
     };
   } {
+    const executionId = generateExecutionId();
+    const toolNames = this.tools.map(
+      (tool) => (tool as { name?: string }).name || "unnamed",
+    );
+    const promptId = generatePromptId(this.systemPrompt, toolNames);
+
+    // Track prompt metadata (once per unique prompt)
+    this.trackPromptMetadata(promptId);
+
+    // Track prompt execution
+    this.trackPromptExecution(executionId, promptId, messages);
+
     const systemMessage: CoreMessage = {
       role: "system",
       content: this.systemPrompt,
@@ -179,6 +334,18 @@ export class PromptBuilder {
     system: string;
     tools?: Array<{ name: string; description: string; parameters: object }>;
   } {
+    const executionId = generateExecutionId();
+    const toolNames = this.tools.map(
+      (tool) => (tool as { name?: string }).name || "unnamed",
+    );
+    const promptId = generatePromptId(this.systemPrompt, toolNames);
+
+    // Track prompt metadata (once per unique prompt)
+    this.trackPromptMetadata(promptId);
+
+    // Track prompt execution (no messages for Anthropic)
+    this.trackPromptExecution(executionId, promptId, []);
+
     let systemPrompt = this.systemPrompt;
 
     // Add output format instructions for Anthropic (no native structured outputs)

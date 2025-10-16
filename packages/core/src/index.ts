@@ -15,6 +15,9 @@ export {
   extractDescription,
 } from "./schema/zodToJsonSchema.js";
 
+// Analytics utilities (optional, for advanced users)
+export * from "./analytics/index.js";
+
 // Types
 export type {
   CoreMessage,

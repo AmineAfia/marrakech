@@ -146,6 +146,35 @@ Convert to Anthropic format.
 const { system, tools } = p.toAnthropic();
 ```
 
+## Analytics
+
+The SDK includes optional analytics tracking to help you understand how your prompts and tools are being used. Analytics are completely opt-in and designed to have zero impact on your application's performance.
+
+### Activation
+
+Set the `MARRAKECH_API_KEY` environment variable:
+
+```bash
+export MARRAKECH_API_KEY="your-api-key-here"
+```
+
+Once set, analytics will automatically start tracking without any code changes.
+
+### What's Tracked
+
+- **Prompt Metadata**: Content, tools, and version information
+- **Prompt Executions**: When prompts are compiled and used  
+- **Tool Calls**: When tools are executed (Vercel AI SDK integration only)
+
+### Privacy & Opt-out
+
+- All data is sent securely to Marrakech's analytics endpoint
+- No sensitive information is collected
+- Disable anytime: `MARRAKECH_ANALYTICS_DISABLED=true`
+- Debug mode: `MARRAKECH_DEBUG=true` to see what data is being sent
+
+For detailed information, see [Analytics Documentation](docs/ANALYTICS.md).
+
 ## Examples
 
 - **[Basic Usage](examples/basic-usage.ts)** - Simple prompt building
