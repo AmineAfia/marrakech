@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { CoreMessage, ToolFunction, OutputFormat } from "./types.js";
+import type { ToolFunction, OutputFormat, Message } from "./types.js";
 import { extractToolMetadata } from "./tools/tool.js";
 import { zodToJsonSchema } from "./schema/zodToJsonSchema.js";
 import { AnalyticsClient } from "./analytics/AnalyticsClient.js";
@@ -12,6 +12,7 @@ import {
   estimateCost,
   getCurrentTimestamp,
 } from "./analytics/utils.js";
+import { normalizeMessage } from "./utils/messageUtils.js";
 
 export class PromptBuilder {
   public systemPrompt: string;
@@ -81,10 +82,14 @@ export class PromptBuilder {
   private trackPromptExecution(
     executionId: string,
     promptId: string,
-    messages: CoreMessage[],
+    messages: Message[],
     model = "unknown",
   ): void {
-    const requestTokens = estimateTokens(JSON.stringify(messages));
+    // Normalize messages to strings for token estimation
+    const messageStrings = messages
+      .map((msg) => normalizeMessage(msg))
+      .join(" ");
+    const requestTokens = estimateTokens(messageStrings);
 
     this.analyticsClient.trackPromptExecution({
       execution_id: executionId,
@@ -124,12 +129,29 @@ export class PromptBuilder {
 
   /**
    * Get tools in Vercel AI SDK format (record)
+   * Supports both v4 (parameters) and v5 (inputSchema) for compatibility
    */
   private getToolsForVercelAI(
     executionId: string,
     promptId: string,
-  ): Record<string, unknown> {
-    const tools: Record<string, unknown> = {};
+  ): Record<
+    string,
+    {
+      description: string;
+      parameters: z.ZodType; // v4 compatibility
+      inputSchema: z.ZodType; // v5 compatibility
+      execute?: (input: unknown, context?: unknown) => Promise<unknown>;
+    }
+  > {
+    const tools: Record<
+      string,
+      {
+        description: string;
+        parameters: z.ZodType;
+        inputSchema: z.ZodType;
+        execute?: (input: unknown, context?: unknown) => Promise<unknown>;
+      }
+    > = {};
     const usedNames = new Set<string>();
 
     for (const tool of this.tools) {
@@ -150,7 +172,8 @@ export class PromptBuilder {
       usedNames.add(name);
       tools[name] = {
         description: metadata.description,
-        inputSchema: zodToJsonSchema(metadata.schema),
+        parameters: metadata.schema, // ✅ v4: Return raw Zod schema
+        inputSchema: metadata.schema, // ✅ v5: Return raw Zod schema
         execute: this.wrapToolExecution(
           tool.execute,
           name,
@@ -252,9 +275,17 @@ export class PromptBuilder {
   /**
    * Convert to Vercel AI SDK format
    */
-  toVercelAI(messages: CoreMessage[] = []): {
-    messages: CoreMessage[];
-    tools?: Record<string, unknown>;
+  toVercelAI(messages: Message[] = []): {
+    messages: Message[];
+    tools?: Record<
+      string,
+      {
+        description: string;
+        parameters: z.ZodType; // v4 compatibility
+        inputSchema: z.ZodType; // v5 compatibility
+        execute?: (input: unknown, context?: unknown) => Promise<unknown>;
+      }
+    >;
     responseFormat?: {
       type: "json_schema";
       json_schema: { name: string; strict: boolean; schema: object };
@@ -272,7 +303,7 @@ export class PromptBuilder {
     // Track prompt execution
     this.trackPromptExecution(executionId, promptId, messages);
 
-    const systemMessage: CoreMessage = {
+    const systemMessage: Message = {
       role: "system",
       content: this.systemPrompt,
     };
@@ -291,8 +322,8 @@ export class PromptBuilder {
   /**
    * Convert to OpenAI format
    */
-  toOpenAI(messages: CoreMessage[] = []): {
-    messages: CoreMessage[];
+  toOpenAI(messages: Message[] = []): {
+    messages: Message[];
     tools?: Array<{ name: string; description: string; parameters: object }>;
     response_format?: {
       type: "json_schema";
@@ -311,7 +342,7 @@ export class PromptBuilder {
     // Track prompt execution
     this.trackPromptExecution(executionId, promptId, messages);
 
-    const systemMessage: CoreMessage = {
+    const systemMessage: Message = {
       role: "system",
       content: this.systemPrompt,
     };

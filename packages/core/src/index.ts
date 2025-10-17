@@ -18,9 +18,29 @@ export {
 // Analytics utilities (optional, for advanced users)
 export * from "./analytics/index.js";
 
+// Message utilities
+export * from "./utils/messageUtils.js";
+
 // Types
 export type {
   CoreMessage,
   ToolFunction,
   OutputFormat,
+  Message,
+  ModelMessage,
+  UserModelMessage,
+  AssistantModelMessage,
+  SystemModelMessage,
+  ToolModelMessage,
+  UserContent,
+  AssistantContent,
+  ToolContent,
+  TextPart,
+  ImagePart,
+  FilePart,
+  ToolCallPart,
+  ToolResultPart,
+  ReasoningPart,
+  JSONValue,
+  LanguageModelV3ToolResultOutput,
 } from "./types.js";
