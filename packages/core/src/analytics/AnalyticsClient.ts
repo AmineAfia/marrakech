@@ -183,12 +183,6 @@ export class AnalyticsClient {
             (data.prompt_executions?.length || 0) +
             (data.tool_calls?.length || 0),
         });
-
-        console.log("[Marrakech Analytics] SSL/TLS info:", {
-          nodeVersion: process.version,
-          platform: process.platform,
-          hasOpenSSL: !!process.versions.openssl,
-        });
       }
 
       // Fire-and-forget: don't await the response
@@ -197,7 +191,7 @@ export class AnalyticsClient {
         headers: {
           "Content-Type": "application/json",
           "x-api-key": this.apiKey || "",
-          "User-Agent": "Marrakech-SDK/1.0.0",
+          "User-Agent": "Marrakech-SDK",
         },
         body: jsonString,
       });
@@ -206,48 +200,38 @@ export class AnalyticsClient {
       if (fetchPromise && typeof fetchPromise.catch === "function") {
         fetchPromise
           .then(async (response) => {
-            // Log response details for debugging
-            if (process.env.MARRAKECH_DEBUG === "true") {
+            // Only log errors, never log successful requests
+            if (!response.ok && process.env.MARRAKECH_DEBUG === "true") {
+              // Only consume response body for error cases
               try {
                 const responseText = await response.text();
-                console.log("[Marrakech Analytics] Response received:", {
+                console.error("[Marrakech Analytics] Server error response:", {
                   status: response.status,
                   statusText: response.statusText,
-                  headers: Object.fromEntries(response.headers.entries()),
                   body: responseText,
-                  bodyLength: responseText.length,
-                  isJSON: this.isValidJSON(responseText),
+                  requestBody: `${jsonString.substring(0, 500)}...`,
                 });
-
-                // If response is not successful, log additional details
-                if (!response.ok) {
-                  console.error(
-                    "[Marrakech Analytics] Server error response:",
-                    {
-                      status: response.status,
-                      statusText: response.statusText,
-                      body: responseText,
-                      requestBody: `${jsonString.substring(0, 500)}...`,
-                    },
-                  );
-                }
               } catch (responseError) {
-                this.logError("Error reading response", responseError, {
+                this.logError("Error reading error response", responseError, {
                   status: response.status,
                   statusText: response.statusText,
                 });
               }
             }
+            // ✅ No logging for successful requests - completely silent
           })
           .catch((error) => {
-            // Silently ignore network errors - analytics should never break user code
-            this.logError("Network error sending batch", error, {
-              batchSize:
-                (data.prompt_metadata?.length || 0) +
-                (data.prompt_executions?.length || 0) +
-                (data.tool_calls?.length || 0),
-              hasApiKey: !!this.apiKey,
-            });
+            // Only log network errors in debug mode
+            if (process.env.MARRAKECH_DEBUG === "true") {
+              this.logError("Network error sending batch", error, {
+                batchSize:
+                  (data.prompt_metadata?.length || 0) +
+                  (data.prompt_executions?.length || 0) +
+                  (data.tool_calls?.length || 0),
+                hasApiKey: !!this.apiKey,
+              });
+            }
+            // ✅ Silent by default - no console output unless debug mode is enabled
           });
       }
     } catch (error) {
@@ -259,18 +243,6 @@ export class AnalyticsClient {
           (data.tool_calls?.length || 0),
         hasApiKey: !!this.apiKey,
       });
-    }
-  }
-
-  /**
-   * Check if a string is valid JSON
-   */
-  private isValidJSON(str: string): boolean {
-    try {
-      JSON.parse(str);
-      return true;
-    } catch {
-      return false;
     }
   }
 
