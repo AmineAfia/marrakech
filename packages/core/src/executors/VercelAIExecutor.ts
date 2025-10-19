@@ -110,8 +110,33 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
           output = (result as { text: string }).text;
         }
       } else {
-        // Text output
-        output = (result as { text: string }).text;
+        // Text output - but check if we have tool results instead
+        const resultObj = result as Record<string, unknown>;
+        if (resultObj.text) {
+          output = resultObj.text;
+        } else if (
+          resultObj.toolResults &&
+          Array.isArray(resultObj.toolResults) &&
+          resultObj.toolResults.length > 0
+        ) {
+          // If we have tool results, use the last one as output
+          const lastToolResult = resultObj.toolResults[
+            resultObj.toolResults.length - 1
+          ] as Record<string, unknown>;
+          output = lastToolResult.result || lastToolResult.output;
+        } else if (
+          resultObj.toolCalls &&
+          Array.isArray(resultObj.toolCalls) &&
+          resultObj.toolCalls.length > 0
+        ) {
+          // If we have tool calls but no results, extract from steps
+          const lastStep = steps[steps.length - 1];
+          if (lastStep?.toolCalls && lastStep.toolCalls.length > 0) {
+            output = lastStep.toolCalls[lastStep.toolCalls.length - 1].output;
+          }
+        } else {
+          output = resultObj.text || "";
+        }
       }
 
       return {

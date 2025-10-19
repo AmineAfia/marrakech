@@ -83,10 +83,7 @@ export class TestRunner {
         }
 
         // Look for exported PromptWithTests instances
-        console.log(`[DEBUG] Checking exports from ${file}:`, Object.keys(module));
         for (const [exportName, exportValue] of Object.entries(module)) {
-          console.log(`[DEBUG] Checking export ${exportName}:`, typeof exportValue, exportValue ? Object.keys(exportValue) : 'null');
-          
           // Check if it's a PromptWithTests instance
           if (
             exportValue &&
@@ -95,7 +92,6 @@ export class TestRunner {
             "getTestCases" in exportValue
           ) {
             // This is a real PromptWithTests instance
-            console.log(`[DEBUG] Found real PromptWithTests instance: ${exportName}`);
             prompts.push({
               name: exportName,
               prompt: exportValue as PromptWithTests,
@@ -115,10 +111,8 @@ export class TestRunner {
    */
   private async loadTypeScriptFileDirect(filePath: string): Promise<Record<string, unknown>> {
     try {
-      // Use Node.js v22's built-in TypeScript support by spawning a new process
-      // with the --experimental-strip-types flag
       const execFileAsync = promisify(execFile);
-      
+
       // Create a loader script that imports the TypeScript file and runs the tests directly
       const loaderScript = `
         import { pathToFileURL } from 'node:url';
@@ -129,7 +123,6 @@ export class TestRunner {
         for (const [key, value] of Object.entries(module)) {
           if (value && typeof value === 'object' && 'run' in value && 'getTestCases' in value) {
             // This is a PromptWithTests instance - run it directly
-            console.log(\`[DEBUG] Found PromptWithTests: \${key}\`);
             try {
               const result = await value.run({
                 concurrency: 1,
@@ -151,52 +144,47 @@ export class TestRunner {
         }
       `;
 
-      const { stdout } = await execFileAsync('node', [
-        '--experimental-strip-types',
-        '--input-type=module',
-        '-e', loaderScript
+      const { stdout } = await execFileAsync("node", [
+        "--experimental-strip-types",
+        "--input-type=module",
+        "-e",
+        loaderScript,
       ]);
 
       // Parse the output from the direct execution
-      const lines = stdout.trim().split('\n');
+      const lines = stdout.trim().split("\n");
       const realModule: Record<string, unknown> = {};
-      
+
       for (const line of lines) {
-        if (line.startsWith('[DEBUG] Found PromptWithTests:')) {
-          console.log(line);
-        } else if (line.startsWith('{')) {
+        if (line.startsWith("{")) {
           try {
             const result = JSON.parse(line);
-            console.log(`[DEBUG] Direct execution result: ${JSON.stringify(result, null, 2)}`);
-            
+
             if (result.success && result.result) {
               // Create a mock PromptWithTests that returns the actual results
-              console.log(`[DEBUG] Full test results for ${result.key}:`, JSON.stringify(result.result, null, 2));
               realModule[result.key] = {
-                run: async (options: unknown) => {
-                  console.log(`[DEBUG] Returning direct execution results for ${result.key}`);
+                run: async (_options: unknown) => {
                   return result.result;
                 },
                 getTestCases: () => {
                   return result.result.results || [];
-                }
+                },
               };
             } else if (!result.success) {
-              console.log(`[DEBUG] Direct execution failed for ${result.key}: ${result.error}`);
               // Create a mock that shows the error
               realModule[result.key] = {
-                run: async (options: unknown) => {
+                run: async (_options: unknown) => {
                   return {
                     total: 0,
                     passed: 0,
                     failed: 0,
                     duration: 0,
-                    results: []
+                    results: [],
                   };
                 },
                 getTestCases: () => {
                   return [];
-                }
+                },
               };
             }
           } catch (e) {
@@ -204,76 +192,13 @@ export class TestRunner {
           }
         }
       }
-      
+
       return realModule;
     } catch (error) {
-      console.log(`[DEBUG] Failed to load TypeScript file ${filePath}:`, error);
       throw new Error(`Failed to load TypeScript file: ${error}`);
     }
   }
 
-  /**
-   * Simple approach: Use Node.js v22's built-in TypeScript support with direct import
-   */
-  private async loadTypeScriptFileSimple(filePath: string): Promise<Record<string, unknown>> {
-    try {
-      // Use Node.js v22's built-in TypeScript support directly
-      const execFileAsync = promisify(execFile);
-      
-      // Create a simple loader script that just imports the file
-      const loaderScript = `
-        import { pathToFileURL } from 'node:url';
-        const fileUrl = pathToFileURL('${filePath}').href;
-        const module = await import(fileUrl);
-        
-        // For now, just return the module structure without methods
-        // This is a workaround for the serialization issue
-        const result = {};
-        for (const [key, value] of Object.entries(module)) {
-          if (value && typeof value === 'object') {
-            // Check if it has the structure of a PromptWithTests
-            if ('prompt' in value && 'testCases' in value) {
-              result[key] = { 
-                isPromptWithTests: true, 
-                name: key,
-                hasPrompt: true,
-                hasTestCases: true,
-                testCaseCount: Array.isArray(value.testCases) ? value.testCases.length : 0
-              };
-            } else {
-              result[key] = { 
-                isPromptWithTests: false, 
-                name: key,
-                type: typeof value,
-                keys: Object.keys(value)
-              };
-            }
-          } else {
-            result[key] = { 
-              isPromptWithTests: false, 
-              name: key,
-              type: typeof value
-            };
-          }
-        }
-        
-        console.log(JSON.stringify(result, null, 2));
-      `;
-
-      const { stdout } = await execFileAsync('node', [
-        '--experimental-strip-types',
-        '--input-type=module',
-        '-e', loaderScript
-      ]);
-
-      const moduleData = JSON.parse(stdout);
-      console.log(`[DEBUG] Loaded TypeScript module from ${filePath}:`, Object.keys(moduleData));
-      return moduleData;
-    } catch (error) {
-      console.log(`[DEBUG] Failed to load TypeScript file ${filePath}:`, error);
-      throw new Error(`Failed to load TypeScript file: ${error}`);
-    }
-  }
 
   /**
    * Run all discovered tests
