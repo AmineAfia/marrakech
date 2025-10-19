@@ -228,7 +228,7 @@ describe('AnalyticsClient', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const call = mockFetch.mock.calls[0];
-      expect(call[0]).toBe('https://marrakesh.dev/api/ingest');
+      expect(call[0]).toBe("https://www.marrakesh.dev/api/ingest");
       expect(call[1].method).toBe('POST');
       expect(call[1].headers['x-api-key']).toBe('test-key');
       
@@ -348,8 +348,13 @@ describe('AnalyticsClient', () => {
       // Wait for async operations
       await new Promise(resolve => setTimeout(resolve, 10));
 
+      expect(console.error).toHaveBeenCalled();
       expect(console.error).toHaveBeenCalledWith(
-        '[Marrakech Analytics] Network error sending batch'
+        "[Marrakech Analytics] Network error sending batch",
+        expect.objectContaining({
+          context: "[Marrakech Analytics] Network error sending batch",
+          error: "Network error",
+        }),
       );
     });
   });

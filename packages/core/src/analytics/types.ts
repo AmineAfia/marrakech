@@ -48,10 +48,41 @@ export interface PromptExecution {
   error_message?: string | null;
 }
 
+export interface TestRun {
+  test_run_id: string;
+  prompt_id: string;
+  prompt_name: string;
+  total_tests: number;
+  passed_tests: number;
+  failed_tests: number;
+  duration_ms: number;
+  timestamp: string;
+  environment: string; // 'local', 'ci', 'production'
+  git_commit?: string;
+  account_id?: string;
+  organization_id?: string;
+}
+
+export interface TestCaseResult {
+  test_case_id: string;
+  test_run_id: string;
+  prompt_id: string;
+  input: string;
+  expected_output?: string;
+  actual_output: string;
+  passed: boolean;
+  duration_ms: number;
+  execution_id: string;
+  error_message?: string;
+  timestamp?: string;
+}
+
 export interface IngestionRequest {
   tool_calls: ToolCall[];
   prompt_metadata: PromptMetadata[];
   prompt_executions: PromptExecution[];
+  test_runs: TestRun[];
+  test_cases: TestCaseResult[];
 }
 
 export interface SuccessResponse {
@@ -61,6 +92,8 @@ export interface SuccessResponse {
     tool_calls: TinybirdResult;
     prompt_metadata: TinybirdResult;
     prompt_executions: TinybirdResult;
+    test_runs: TinybirdResult;
+    test_cases: TinybirdResult;
   };
 }
 
@@ -82,5 +115,7 @@ export interface IngestionFailureResponse {
     tool_calls: TinybirdResult;
     prompt_metadata: TinybirdResult;
     prompt_executions: TinybirdResult;
+    test_runs: TinybirdResult;
+    test_cases: TinybirdResult;
   };
 }

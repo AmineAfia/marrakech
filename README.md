@@ -257,6 +257,55 @@ Once set, analytics will automatically start tracking without any code changes.
 
 For detailed information, see [Analytics Documentation](docs/ANALYTICS.md).
 
+## Testing Your Prompts
+
+Test your prompts like you test code. Marrakech provides a complete testing framework with CLI support and automatic analytics tracking.
+
+### Quick Example
+
+```typescript
+import { prompt, createVercelAIExecutor } from 'marrakech-sdk'
+import { openai } from '@ai-sdk/openai'
+
+const weatherAgent = prompt('You are a weather assistant')
+  .tool(getWeather)
+  .test([
+    { input: 'Weather in Paris?', expect: { city: 'Paris' } },
+    { input: 'Is it raining in Tokyo?', expect: { city: 'Tokyo' } }
+  ])
+
+// Run tests
+const results = await weatherAgent.run({
+  executor: createVercelAIExecutor({ model: openai('gpt-4') })
+})
+
+console.log(`${results.passed}/${results.total} tests passed`)
+```
+
+### CLI Usage
+
+```bash
+# Run tests
+npx marrakech test
+
+# Watch mode - reruns on file changes
+npx marrakech test --watch
+
+# Stop on first failure
+npx marrakech test --bail
+```
+
+### Features
+
+- **🧪 Test Cases**: Define test cases with expected outputs
+- **🔄 Watch Mode**: Auto-rerun tests on file changes
+- **🤖 Agentic Support**: Handles multi-step tool calling automatically
+- **📊 Analytics**: Test results automatically tracked to dashboard
+- **⚡ Parallel Execution**: Run tests concurrently for speed
+- **✅ Assertions**: Deep equality matching with partial object support
+
+For complete documentation, see [Testing Guide](docs/TESTING.md).
+
 ## Migration from v4.0 to v5.0
 
 If you're upgrading from an earlier version, note that the SDK now uses AI SDK v5.0 naming conventions:

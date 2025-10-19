@@ -8,6 +8,8 @@ import type {
   PromptMetadata,
   PromptExecution,
   IngestionRequest,
+  TestRun,
+  TestCaseResult,
 } from "./types.js";
 
 export class AnalyticsClient {
@@ -24,7 +26,13 @@ export class AnalyticsClient {
       process.env.MARRAKECH_ANALYTICS_ENDPOINT ||
       "https://www.marrakesh.dev/api/ingest";
     this.isDisabled = process.env.MARRAKECH_ANALYTICS_DISABLED === "true";
-    this.queue = { tool_calls: [], prompt_metadata: [], prompt_executions: [] };
+    this.queue = {
+      tool_calls: [],
+      prompt_metadata: [],
+      prompt_executions: [],
+      test_runs: [],
+      test_cases: [],
+    };
 
     // Set up process exit handler for cleanup
     if (typeof process !== "undefined") {
@@ -87,6 +95,34 @@ export class AnalyticsClient {
   }
 
   /**
+   * Track test run
+   */
+  public trackTestRun(data: TestRun): void {
+    if (!this.shouldTrack()) return;
+
+    try {
+      this.queue.test_runs.push(data);
+      this.scheduleFlush();
+    } catch (error) {
+      this.logError("Failed to track test run", error);
+    }
+  }
+
+  /**
+   * Track test case result
+   */
+  public trackTestCase(data: TestCaseResult): void {
+    if (!this.shouldTrack()) return;
+
+    try {
+      this.queue.test_cases.push(data);
+      this.scheduleFlush();
+    } catch (error) {
+      this.logError("Failed to track test case", error);
+    }
+  }
+
+  /**
    * Flush all pending events to the server
    */
   public flush(): void {
@@ -114,7 +150,9 @@ export class AnalyticsClient {
     return (
       this.queue.tool_calls.length === 0 &&
       this.queue.prompt_metadata.length === 0 &&
-      this.queue.prompt_executions.length === 0
+      this.queue.prompt_executions.length === 0 &&
+      this.queue.test_runs.length === 0 &&
+      this.queue.test_cases.length === 0
     );
   }
 
@@ -134,7 +172,9 @@ export class AnalyticsClient {
     const totalEvents =
       this.queue.tool_calls.length +
       this.queue.prompt_metadata.length +
-      this.queue.prompt_executions.length;
+      this.queue.prompt_executions.length +
+      this.queue.test_runs.length +
+      this.queue.test_cases.length;
 
     if (totalEvents >= 50) {
       this.flush();
@@ -289,6 +329,12 @@ export class AnalyticsClient {
    * Clear the queue after successful send
    */
   private clearQueue(): void {
-    this.queue = { tool_calls: [], prompt_metadata: [], prompt_executions: [] };
+    this.queue = {
+      tool_calls: [],
+      prompt_metadata: [],
+      prompt_executions: [],
+      test_runs: [],
+      test_cases: [],
+    };
   }
 }

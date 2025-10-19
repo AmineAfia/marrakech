@@ -13,6 +13,9 @@ import {
   getCurrentTimestamp,
 } from "./analytics/utils.js";
 import { normalizeMessage } from "./utils/messageUtils.js";
+import type { TestCase, EvalOptions, EvalResult } from "./testing/types.js";
+import type { Executor } from "./executors/types.js";
+import { PromptWithTests } from "./testing/PromptWithTests.js";
 
 export class PromptBuilder {
   public systemPrompt: string;
@@ -398,6 +401,59 @@ ${JSON.stringify(jsonSchema, null, 2)}
       system: systemPrompt,
       tools: tools.length > 0 ? tools : undefined,
     };
+  }
+
+  /**
+   * Define test cases for this prompt
+   * @param cases - Array of test cases
+   * @param executor - Optional default executor for running tests
+   * @returns PromptWithTests instance
+   *
+   * @example
+   * ```typescript
+   * const weatherAgent = prompt('You are a weather assistant')
+   *   .tool(getWeather)
+   *   .test([
+   *     { input: 'Weather in Paris?', expect: { city: 'Paris' } },
+   *     { input: 'Is it raining in Tokyo?', expect: { city: 'Tokyo' } }
+   *   ])
+   * ```
+   */
+  test(cases: TestCase[], executor?: Executor): PromptWithTests {
+    return new PromptWithTests(this, cases, executor);
+  }
+
+  /**
+   * Run a single evaluation with this prompt
+   * @param input - Input to test
+   * @param options - Evaluation options including executor and expected output
+   * @returns Evaluation result
+   *
+   * @example
+   * ```typescript
+   * const result = await prompt('Translate to French')
+   *   .eval('Hello', {
+   *     executor: createVercelAIExecutor({ model: openai('gpt-4') }),
+   *     expect: 'Bonjour'
+   *   })
+   * ```
+   */
+  async eval(
+    input: string,
+    options: EvalOptions & { executor: Executor },
+  ): Promise<EvalResult> {
+    const testCase: TestCase = {
+      input,
+      expect: options.expect,
+      timeout: options.timeout,
+    };
+
+    const promptWithTests = new PromptWithTests(
+      this,
+      [testCase],
+      options.executor,
+    );
+    return promptWithTests.runSingle(testCase, options.executor);
   }
 }
 
