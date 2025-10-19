@@ -56,7 +56,9 @@ export class PromptWithTests {
     if (concurrency === 1) {
       // Sequential execution
       for (const testCase of this.testCases) {
+        options?.onTestStart?.(testCase);
         const result = await this.runSingle(testCase, executor);
+        options?.onTestComplete?.(result);
         results.push(result);
 
         if (options?.bail && !result.passed) {
@@ -72,7 +74,12 @@ export class PromptWithTests {
 
       for (const chunk of chunks) {
         const chunkResults = await Promise.all(
-          chunk.map((tc) => this.runSingle(tc, executor)),
+          chunk.map(async (tc) => {
+            options?.onTestStart?.(tc);
+            const result = await this.runSingle(tc, executor);
+            options?.onTestComplete?.(result);
+            return result;
+          }),
         );
         results.push(...chunkResults);
 
@@ -117,15 +124,16 @@ export class PromptWithTests {
 
       // Check if execution succeeded
       if (executionResult.finishReason === "error") {
-        return {
-          input: testCase.input,
-          output: null,
-          duration: Date.now() - startTime,
-          passed: false,
-          execution_id: executionId,
-          error: executionResult.error,
-          expected: testCase.expect,
-        };
+      return {
+        input: testCase.input,
+        output: null,
+        duration: Date.now() - startTime,
+        passed: false,
+        execution_id: executionId,
+        error: executionResult.error,
+        expected: testCase.expect,
+        steps: executionResult.steps,
+      };
       }
 
       // Run assertions if expected value provided
@@ -141,6 +149,7 @@ export class PromptWithTests {
         passed,
         execution_id: executionId,
         expected: testCase.expect,
+        steps: executionResult.steps,
       };
     } catch (error) {
       return {

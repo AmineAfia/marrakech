@@ -2,7 +2,7 @@
  * Testing types for eval-driven development
  */
 
-import type { Executor } from "../executors/types.js";
+import type { Executor, ExecutionStep } from "../executors/types.js";
 
 /**
  * A single test case for prompt evaluation
@@ -48,6 +48,8 @@ export interface EvalResult {
   error?: string;
   /** Expected output if assertion was made */
   expected?: unknown;
+  /** Execution steps including tool calls */
+  steps?: ExecutionStep[];
 }
 
 /**
@@ -76,6 +78,10 @@ export interface TestRunOptions {
   concurrency?: number;
   /** Executor to use for running tests */
   executor?: Executor;
+  /** Callback when a test starts */
+  onTestStart?: (testCase: TestCase) => void;
+  /** Callback when a test completes */
+  onTestComplete?: (result: EvalResult) => void;
 }
 
 /**

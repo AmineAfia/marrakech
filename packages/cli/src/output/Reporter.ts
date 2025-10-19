@@ -5,17 +5,17 @@
 import chalk from "chalk";
 import ora from "ora";
 import type { RunnerResults } from "../runner/TestRunner.js";
-import {
-  formatDuration,
-  formatDiff,
-  formatSummary,
-} from "./formatters.js";
+import type { EvalResult, ExecutionStep } from "marrakech-sdk";
+import { formatDuration, formatDiff } from "./formatters.js";
 
 /**
  * Reporter for formatting and displaying test results
  */
 export class Reporter {
   private spinner?: ReturnType<typeof ora>;
+  private currentPrompt?: string;
+  private currentTest?: string;
+  private testProgress = { current: 0, total: 0 };
 
   /**
    * Indicate that tests are starting
@@ -28,9 +28,7 @@ export class Reporter {
    * Show watch mode indicator
    */
   watchMode(): void {
-    console.log(
-      chalk.bold.blue("\n👁️  Watch mode enabled\n"),
-    );
+    console.log(chalk.bold.blue("\n👁️  Watch mode enabled\n"));
   }
 
   /**
@@ -38,49 +36,6 @@ export class Reporter {
    */
   printResults(results: RunnerResults): void {
     console.log(); // Blank line
-
-    // Print results for each prompt
-    for (const promptResult of results.promptResults) {
-      console.log(
-        chalk.bold.cyan(`\n📝 ${promptResult.promptName}`),
-      );
-
-      for (const testResult of promptResult.results.results) {
-        if (testResult.passed) {
-          // Passed test
-          console.log(
-            chalk.green(
-              `  ✅ ${testResult.input} ${chalk.gray(`(${formatDuration(testResult.duration)})`)}`,
-            ),
-          );
-        } else {
-          // Failed test
-          console.log(
-            chalk.red(
-              `  ❌ ${testResult.input} ${chalk.gray(`(${formatDuration(testResult.duration)})`)}`,
-            ),
-          );
-
-          // Show error or diff
-          if (testResult.error) {
-            console.log(chalk.red(`     Error: ${testResult.error}`));
-          } else if (testResult.expected !== undefined) {
-            const diff = formatDiff(
-              testResult.expected,
-              testResult.output,
-            );
-            console.log(chalk.gray(`     ${diff}`));
-          }
-        }
-      }
-
-      // Print prompt summary
-      const promptSummary = formatSummary(promptResult.results);
-      console.log(chalk.gray(`  ${promptSummary}`));
-    }
-
-    // Print overall summary
-    console.log();
     this.printOverallSummary(results);
   }
 
@@ -88,9 +43,10 @@ export class Reporter {
    * Print overall summary
    */
   private printOverallSummary(results: RunnerResults): void {
-    const passRate = results.total > 0
-      ? ((results.passed / results.total) * 100).toFixed(1)
-      : "0.0";
+    const passRate =
+      results.total > 0
+        ? ((results.passed / results.total) * 100).toFixed(1)
+        : "0.0";
 
     if (results.failed === 0) {
       console.log(
@@ -111,11 +67,7 @@ export class Reporter {
       );
     }
 
-    console.log(
-      chalk.gray(
-        `   Time: ${formatDuration(results.duration)}`,
-      ),
-    );
+    console.log(chalk.gray(`   Time: ${formatDuration(results.duration)}`));
     console.log(); // Blank line
   }
 
@@ -146,6 +98,73 @@ export class Reporter {
       }
       this.spinner = undefined;
     }
+  }
+
+  /**
+   * Show file discovery
+   */
+  fileDiscovered(count: number): void {
+    console.log(
+      chalk.gray(`\n   Found ${count} test file${count === 1 ? "" : "s"}\n`),
+    );
+  }
+
+  /**
+   * Show prompt starting
+   */
+  promptStarting(name: string): void {
+    console.log(chalk.bold.cyan(`📝 ${name}`));
+  }
+
+  /**
+   * Show test starting with progress
+   */
+  testStarting(current: number, total: number, input: string): void {
+    const truncated = input.length > 60 ? `${input.slice(0, 60)}...` : input;
+    console.log(chalk.gray(`   [${current}/${total}] ${truncated}`));
+  }
+
+  /**
+   * Show execution steps (tool calls)
+   */
+  showSteps(steps?: ExecutionStep[]): void {
+    if (!steps || steps.length === 0) return;
+
+    for (const step of steps) {
+      if (step.toolCalls && step.toolCalls.length > 0) {
+        for (const tc of step.toolCalls) {
+          const inputStr = JSON.stringify(tc.input);
+          const truncated =
+            inputStr.length > 40 ? `${inputStr.slice(0, 40)}...` : inputStr;
+          console.log(chalk.gray(`       🔧 ${tc.toolName}(${truncated})`));
+        }
+      }
+    }
+  }
+
+  /**
+   * Show test result
+   */
+  testCompleted(result: EvalResult): void {
+    const icon = result.passed ? "✅" : "❌";
+    const color = result.passed ? chalk.green : chalk.red;
+    const duration = formatDuration(result.duration);
+
+    this.showSteps(result.steps);
+
+    console.log(
+      color(
+        `       ${icon} ${result.passed ? "Passed" : "Failed"} ${chalk.gray(`(${duration})`)}`,
+      ),
+    );
+
+    if (!result.passed && result.error) {
+      console.log(chalk.red(`          Error: ${result.error}`));
+    } else if (!result.passed && result.expected !== undefined) {
+      const diff = formatDiff(result.expected, result.output);
+      console.log(chalk.gray(`          ${diff}`));
+    }
+    console.log(); // blank line
   }
 }
 

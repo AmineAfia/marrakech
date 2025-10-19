@@ -48,6 +48,11 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
         { role: "user", content: input },
       ]);
 
+      // Get the tool descriptions from the tools object
+      const toolDescriptions = tools
+        ? Object.values(tools).map((t: any) => t.description)
+        : [];
+
       // Execute with tool calling loop using Promise.race for timeout
       // Type assertions are needed because:
       // 1. config.model is 'unknown' to support any AI SDK model
@@ -66,7 +71,10 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
         }) => {
           // Track each tool calling round
           const toolCalls = step.toolCalls as unknown as Array<{
-            toolName: string;
+            id?: string;
+            name?: string;
+            function?: { name?: string };
+            arguments?: unknown;
             args?: unknown;
             input?: unknown;
           }>;
@@ -78,15 +86,18 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
 
           steps.push({
             stepNumber: steps.length + 1,
-            toolCalls: toolCalls?.map((tc) => ({
-              toolName: tc.toolName,
-              input: tc.args ?? tc.input,
-              output: toolResults?.find(
-                (tr) => tr.toolCallId === tc.toolName,
-              )?.result ?? toolResults?.find(
-                (tr) => tr.toolCallId === tc.toolName,
-              )?.output,
-            })),
+            toolCalls: toolCalls?.map((tc, index) => {
+              // Use tool description as the display name
+              const toolName = toolDescriptions[index] ?? "unnamed";
+
+              return {
+                toolName,
+                input: tc.arguments ?? tc.args ?? tc.input,
+                output:
+                  toolResults?.find((tr) => tr.toolCallId === tc.id)?.result ??
+                  toolResults?.find((tr) => tr.toolCallId === tc.id)?.output,
+              };
+            }),
             text: step.text,
           });
         },
