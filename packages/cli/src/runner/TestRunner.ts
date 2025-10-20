@@ -28,6 +28,7 @@ export interface RunnerResults {
 export class TestRunner {
   private options: Required<RunnerOptions>;
   private progressCallback?: (event: { type: string; data: unknown }) => void;
+  private static tsxRegistered = false;
 
   constructor(options: RunnerOptions = {}) {
     this.options = {
@@ -40,6 +41,31 @@ export class TestRunner {
     callback: (event: { type: string; data: unknown }) => void,
   ): void {
     this.progressCallback = callback;
+  }
+
+  /**
+   * Ensure tsx is registered for TypeScript support
+   */
+  private async ensureTsxRegistered(): Promise<void> {
+    if (!TestRunner.tsxRegistered) {
+      try {
+        // Try to register tsx for TypeScript support
+        await import("tsx/esm");
+        TestRunner.tsxRegistered = true;
+      } catch {
+        try {
+          // Fallback to main tsx import
+          await import("tsx");
+          TestRunner.tsxRegistered = true;
+        } catch {
+          // If tsx is not available, we'll handle it in the import
+          console.warn(
+            "tsx not available, TypeScript files may not work properly",
+          );
+          TestRunner.tsxRegistered = true;
+        }
+      }
+    }
   }
 
   /**
@@ -81,29 +107,18 @@ export class TestRunner {
 
     for (const file of files) {
       try {
-        let module: Record<string, unknown>;
-
-        // For now, let's use a simpler approach that works with both JS and TS
-        // We'll use Node.js v22's built-in TypeScript support for all files
+        // Ensure tsx is registered for TypeScript files
         if (file.endsWith(".ts") || file.endsWith(".tsx")) {
-          // Use Node.js v22's built-in TypeScript support directly
-          module = await this.loadTypeScriptFileDirect(file);
-        } else {
-          // Use regular import for JavaScript files
-          const fileUrl = pathToFileURL(file).href;
-          module = await import(fileUrl);
+          await this.ensureTsxRegistered();
         }
+
+        // Use direct import for all files (both JS and TS with tsx registered)
+        const fileUrl = pathToFileURL(file).href;
+        const module = await import(fileUrl);
 
         // Look for exported PromptWithTests instances
         for (const [exportName, exportValue] of Object.entries(module)) {
-          // Check if it's a PromptWithTests instance
-          if (
-            exportValue &&
-            typeof exportValue === "object" &&
-            "run" in exportValue &&
-            "getTestCases" in exportValue
-          ) {
-            // This is a real PromptWithTests instance
+          if (this.isPromptWithTests(exportValue)) {
             prompts.push({
               name: exportName,
               prompt: exportValue as PromptWithTests,
@@ -119,164 +134,16 @@ export class TestRunner {
   }
 
   /**
-   * Load TypeScript files using Node.js v22's built-in TypeScript support
+   * Check if a value is a PromptWithTests instance
    */
-  private async loadTypeScriptFileDirect(
-    filePath: string,
-  ): Promise<Record<string, unknown>> {
-    try {
-      // Create a loader script that imports the TypeScript file and runs the tests directly
-      const loaderScript = `
-        import { pathToFileURL } from 'node:url';
-        const fileUrl = pathToFileURL('${filePath}').href;
-        const module = await import(fileUrl);
-        
-        // Find and run the PromptWithTests instances directly
-        for (const [key, value] of Object.entries(module)) {
-          if (value && typeof value === 'object' && 'run' in value && 'getTestCases' in value) {
-            // This is a PromptWithTests instance - run it directly
-            try {
-              const testCases = value.getTestCases();
-              const total = testCases.length;
-              let current = 0;
-              
-              const result = await value.run({
-                concurrency: 1,
-                bail: false,
-                onTestStart: (tc) => {
-                  current++;
-                  console.error(JSON.stringify({ 
-                    type: 'test-start', 
-                    data: { current, total, input: tc.input }
-                  }));
-                },
-                onTestComplete: (result) => {
-                  console.error(JSON.stringify({ 
-                    type: 'test-complete', 
-                    data: result
-                  }));
-                }
-              });
-              console.log(JSON.stringify({
-                success: true,
-                key: key,
-                result: result
-              }));
-            } catch (error) {
-              console.log(JSON.stringify({
-                success: false,
-                key: key,
-                error: error.message
-              }));
-            }
-          }
-        }
-      `;
-
-      // Use spawn instead of execFile to get real-time stderr streaming
-      const { spawn } = await import("node:child_process");
-
-      return new Promise((resolve, reject) => {
-        const child = spawn("node", [
-          "--experimental-strip-types",
-          "--input-type=module",
-          "-e",
-          loaderScript,
-        ]);
-
-        let stdout = "";
-        let stderr = "";
-
-        child.stdout?.on("data", (data) => {
-          stdout += data.toString();
-        });
-
-        child.stderr?.on("data", (data) => {
-          const chunk = data.toString();
-          stderr += chunk;
-
-          // Process stderr lines in real-time
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.trim() && line.startsWith("{")) {
-              try {
-                const event = JSON.parse(line);
-                if (event.type === "test-start") {
-                  this.progressCallback?.({
-                    type: "test-start",
-                    data: event.data,
-                  });
-                } else if (event.type === "test-complete") {
-                  this.progressCallback?.({
-                    type: "test-complete",
-                    data: event.data,
-                  });
-                }
-              } catch (e) {
-                // Ignore non-JSON stderr
-              }
-            }
-          }
-        });
-
-        child.on("close", (code) => {
-          if (code !== 0) {
-            reject(new Error(`Child process exited with code ${code}`));
-            return;
-          }
-
-          // Parse the final results from stdout
-          const lines = stdout.trim().split("\n");
-          const realModule: Record<string, unknown> = {};
-
-          for (const line of lines) {
-            if (line.startsWith("{")) {
-              try {
-                const result = JSON.parse(line);
-
-                if (result.success && result.result) {
-                  // Create a mock PromptWithTests that returns the actual results
-                  realModule[result.key] = {
-                    run: async (_options: unknown) => {
-                      return result.result;
-                    },
-                    getTestCases: () => {
-                      return result.result.results || [];
-                    },
-                  };
-                } else if (!result.success) {
-                  // Create a mock that shows the error
-                  realModule[result.key] = {
-                    run: async (_options: unknown) => {
-                      return {
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        duration: 0,
-                        results: [],
-                      };
-                    },
-                    getTestCases: () => {
-                      return [];
-                    },
-                  };
-                }
-              } catch (e) {
-                // Ignore non-JSON lines
-              }
-            }
-          }
-
-          resolve(realModule);
-        });
-
-        child.on("error", (error) => {
-          reject(error);
-        });
-      });
-    } catch (error) {
-      throw new Error(`Failed to load TypeScript file: ${error}`);
-    }
+  private isPromptWithTests(value: unknown): boolean {
+    return (
+      value !== null &&
+      value !== undefined &&
+      typeof value === "object" &&
+      "run" in value &&
+      "getTestCases" in value
+    );
   }
 
   /**
@@ -293,10 +160,35 @@ export class TestRunner {
 
     for (const { name, prompt } of prompts) {
       try {
+        // Get test cases first to fire test-start events
+        const testCases = prompt.getTestCases();
+
+        // Fire test-start events for each test case
+        for (let index = 0; index < testCases.length; index++) {
+          const testCase = testCases[index];
+          this.progressCallback?.({
+            type: "test-start",
+            data: {
+              current: index + 1,
+              total: testCases.length,
+              input: testCase.input,
+            },
+          });
+        }
+
+        // Run the tests (this will trigger analytics tracking)
         const results = await prompt.run({
           concurrency: this.options.concurrency,
           bail: this.options.bail,
         });
+
+        // Fire test-complete events for each result
+        for (const result of results.results) {
+          this.progressCallback?.({
+            type: "test-complete",
+            data: result,
+          });
+        }
 
         promptResults.push({
           promptName: name,
@@ -308,7 +200,6 @@ export class TestRunner {
           break;
         }
       } catch (error) {
-        // Handle execution errors
         console.error(`Error running tests for ${name}:`, error);
       }
     }
@@ -318,13 +209,15 @@ export class TestRunner {
     const passed = promptResults.reduce((sum, r) => sum + r.results.passed, 0);
     const failed = promptResults.reduce((sum, r) => sum + r.results.failed, 0);
 
-    return {
+    const finalResults = {
       total,
       passed,
       failed,
       duration: Date.now() - startTime,
       promptResults,
     };
+
+    return finalResults;
   }
 }
 
