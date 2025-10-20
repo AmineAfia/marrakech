@@ -225,8 +225,8 @@ export class AnalyticsClient {
         });
       }
 
-      // Fire-and-forget: execute in next tick to avoid blocking
-      Promise.resolve().then(async () => {
+      // Fire-and-forget: run asynchronously without awaiting (non-blocking)
+      void (async () => {
         try {
           const response = await fetch(this.endpoint, {
             method: "POST",
@@ -266,7 +266,7 @@ export class AnalyticsClient {
             hasApiKey: !!this.apiKey,
           });
         }
-      });
+      })();
     } catch (error) {
       // Silently ignore any errors - analytics should never break user code
       this.logError("Error sending batch", error, {
