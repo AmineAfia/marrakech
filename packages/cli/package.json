@@ -1,6 +1,6 @@
 {
 "name": "@marrakesh/cli",
-  "version": "0.1.0",
+"version": "0.1.0-alpha.1",
 "description": "CLI for testing Marrakesh prompts",
   "type": "module",
   "bin": {

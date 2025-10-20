@@ -1,6 +1,6 @@
 # @marrakesh/core
 
-A structured, testable, and data-driven prompt engineering SDK for TypeScript/JavaScript applications.
+A structured, testable, and data-driven context engineering SDK for the TypeScript world.
 
 ## Features
 
