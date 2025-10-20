@@ -2,6 +2,12 @@ import { describe, it, expect } from "vitest";
 import { prompt } from "../src/PromptBuilder.js";
 import { tool } from "../src/tools/tool.js";
 import { z } from "zod";
+import type {
+  CoreMessage,
+  UserModelMessage,
+  AssistantModelMessage,
+  Message,
+} from "../src/types.js";
 
 describe("PromptBuilder", () => {
   it("should create a basic prompt", () => {
@@ -99,5 +105,179 @@ describe("PromptBuilder", () => {
     const descriptions = toolValues.map((tool: any) => tool.description);
     expect(descriptions).toContain("Tool 1");
     expect(descriptions).toContain("Tool 2");
+  });
+
+  describe("ModelMessage Support", () => {
+    it("should work with CoreMessage (backwards compatibility)", () => {
+      const p = prompt("You are a helpful assistant");
+      const coreMessages: CoreMessage[] = [
+        { role: "user", content: "Hello" },
+        { role: "assistant", content: "Hi there!" },
+      ];
+
+      const result = p.toVercelAI(coreMessages);
+
+      expect(result.messages).toHaveLength(3); // system + 2 messages
+      expect(result.messages[0].role).toBe("system");
+      expect(result.messages[1].role).toBe("user");
+      expect(result.messages[2].role).toBe("assistant");
+    });
+
+    it("should work with UserModelMessage with string content", () => {
+      const p = prompt("You are a helpful assistant");
+      const modelMessages: UserModelMessage[] = [
+        { role: "user", content: "Hello world" },
+      ];
+
+      const result = p.toVercelAI(modelMessages);
+
+      expect(result.messages).toHaveLength(2); // system + 1 message
+      expect(result.messages[0].role).toBe("system");
+      expect(result.messages[1].role).toBe("user");
+      expect(result.messages[1].content).toBe("Hello world");
+    });
+
+    it("should work with UserModelMessage with complex content", () => {
+      const p = prompt("You are a helpful assistant");
+      const modelMessages: UserModelMessage[] = [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Look at this image:" },
+            { type: "image", image: "data:image/png;base64,..." },
+          ],
+        },
+      ];
+
+      const result = p.toVercelAI(modelMessages);
+
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[1].role).toBe("user");
+      expect(Array.isArray(result.messages[1].content)).toBe(true);
+    });
+
+    it("should work with AssistantModelMessage with tool calls", () => {
+      const p = prompt("You are a helpful assistant");
+      const modelMessages: AssistantModelMessage[] = [
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "I will call a tool:" },
+            {
+              type: "tool-call",
+              toolCallId: "call_123",
+              toolName: "getWeather",
+              input: { city: "NYC" },
+            },
+          ],
+        },
+      ];
+
+      const result = p.toVercelAI(modelMessages);
+
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[1].role).toBe("assistant");
+      expect(Array.isArray(result.messages[1].content)).toBe(true);
+    });
+
+    it("should work with mixed CoreMessage and ModelMessage", () => {
+      const p = prompt("You are a helpful assistant");
+      const mixedMessages: Message[] = [
+        { role: "user", content: "Hello" } as CoreMessage,
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "Hi! I can help you." }],
+        } as AssistantModelMessage,
+      ];
+
+      const result = p.toVercelAI(mixedMessages);
+
+      expect(result.messages).toHaveLength(3);
+      expect(result.messages[0].role).toBe("system");
+      expect(result.messages[1].role).toBe("user");
+      expect(result.messages[2].role).toBe("assistant");
+    });
+
+    it("should work with toOpenAI using ModelMessage", () => {
+      const p = prompt("You are a helpful assistant");
+      const modelMessages: UserModelMessage[] = [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Analyze this image:" },
+            { type: "image", image: "data:image/png;base64,..." },
+          ],
+        },
+      ];
+
+      const result = p.toOpenAI(modelMessages);
+
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[0].role).toBe("system");
+      expect(result.messages[1].role).toBe("user");
+    });
+
+    it("should work with toAnthropic (no messages parameter)", () => {
+      const p = prompt("You are a helpful assistant");
+
+      const result = p.toAnthropic();
+
+      expect(result.system).toContain("You are a helpful assistant");
+      expect(result.tools).toBeUndefined();
+    });
+
+    it("should handle reasoning parts in assistant messages", () => {
+      const p = prompt("You are a helpful assistant");
+      const assistantMessages: AssistantModelMessage[] = [
+        {
+          role: "assistant",
+          content: [
+            { type: "reasoning", text: "Let me think about this..." },
+            { type: "text", text: "Here is my answer" },
+          ],
+        },
+      ];
+
+      const result = p.toVercelAI(assistantMessages);
+
+      expect(result.messages).toHaveLength(2); // system + assistant
+      expect(result.messages[0].role).toBe("system");
+      expect(result.messages[1].role).toBe("assistant");
+      expect(result.messages[1].content).toEqual([
+        { type: "reasoning", text: "Let me think about this..." },
+        { type: "text", text: "Here is my answer" },
+      ]);
+    });
+
+    it("should handle file parts in assistant messages", () => {
+      const p = prompt("You are a helpful assistant");
+      const assistantMessages: AssistantModelMessage[] = [
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Here is the file:" },
+            {
+              type: "file",
+              data: "data:text/plain;base64,...",
+              mediaType: "text/plain",
+            },
+          ],
+        },
+      ];
+
+      const result = p.toVercelAI(assistantMessages);
+
+      expect(result.messages).toHaveLength(2); // system + assistant
+      expect(result.messages[0].role).toBe("system");
+      expect(result.messages[1].role).toBe("assistant");
+      expect(result.messages[1].content).toEqual([
+        { type: "text", text: "Here is the file:" },
+        {
+          type: "file",
+          data: "data:text/plain;base64,...",
+          mediaType: "text/plain",
+        },
+      ]);
+    });
   });
 });
