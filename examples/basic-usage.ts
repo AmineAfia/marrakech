@@ -1,4 +1,4 @@
-import { prompt } from "marrakech-sdk";
+import { prompt } from "@marrakesh/core";
 
 // Basic prompt building with new minimal API
 const p = prompt("You are a helpful customer service agent")

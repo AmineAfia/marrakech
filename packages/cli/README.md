@@ -1,40 +1,40 @@
-# Marrakech CLI
+# Marrakesh CLI
 
 Test your prompts like you test code.
 
 ## Installation
 
 ```bash
-npm install -g marrakech
+npm install -g marrakesh
 ```
 
 Or use via npx:
 
 ```bash
-npx marrakech test
+npx marrakesh test
 ```
 
 ## Commands
 
-### `marrakech test [pattern]`
+### `marrakesh test [pattern]`
 
 Run tests matching the glob pattern.
 
 ```bash
 # Test all files
-npx marrakech test
+npx marrakesh test
 
 # Test specific directory
-npx marrakech test "src/prompts/**/*.ts"
+npx marrakesh test "src/prompts/**/*.ts"
 
 # Watch mode
-npx marrakech test --watch
+npx marrakesh test --watch
 
 # Stop on first failure
-npx marrakech test --bail
+npx marrakesh test --bail
 
 # Run tests in parallel
-npx marrakech test --concurrency 10
+npx marrakesh test --concurrency 10
 ```
 
 **Options:**
@@ -49,7 +49,7 @@ npx marrakech test --concurrency 10
 
 ```typescript
 // src/prompts/weather.ts
-import { prompt, tool, createVercelAIExecutor } from 'marrakech-sdk'
+import { prompt, tool, createVercelAIExecutor } from '@marrakesh/core'
 import { openai } from '@ai-sdk/openai'
 
 export const weatherAgent = prompt('You are a weather assistant')
@@ -63,7 +63,7 @@ export const weatherAgent = prompt('You are a weather assistant')
 ### 2. Run Tests
 
 ```bash
-npx marrakech test
+npx marrakesh test
 ```
 
 Output:
@@ -83,16 +83,16 @@ Output:
 ### 3. Watch Mode
 
 ```bash
-npx marrakech test --watch
+npx marrakesh test --watch
 ```
 
 Press `a` to run all tests, `Ctrl+C` to exit.
 
 ## Environment Variables
 
-- `MARRAKECH_API_KEY`: Your Marrakech API key for analytics tracking
-- `MARRAKECH_ANALYTICS_DISABLED`: Set to `true` to disable analytics
-- `MARRAKECH_DEBUG`: Set to `true` to enable debug logging
+- `MARRAKESH_API_KEY`: Your Marrakesh API key for analytics tracking
+- `MARRAKESH_ANALYTICS_DISABLED`: Set to `true` to disable analytics
+- `MARRAKESH_DEBUG`: Set to `true` to enable debug logging
 
 ## CI/CD Integration
 
@@ -110,9 +110,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: npm install
-      - run: npx marrakech test
+      - run: npx marrakesh test
         env:
-          MARRAKECH_API_KEY: ${{ secrets.MARRAKECH_API_KEY }}
+          MARRAKESH_API_KEY: ${{ secrets.MARRAKESH_API_KEY }}
 ```
 
 ## Documentation

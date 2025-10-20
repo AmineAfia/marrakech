@@ -1,4 +1,4 @@
-import { prompt, tool } from "marrakech-sdk";
+import { prompt, tool } from "@marrakesh/core";
 import { z } from "zod";
 
 // Define tools with AI SDK pattern

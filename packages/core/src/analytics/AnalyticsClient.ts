@@ -21,11 +21,11 @@ export class AnalyticsClient {
   private flushTimeout?: NodeJS.Timeout;
 
   private constructor() {
-    this.apiKey = process.env.MARRAKECH_API_KEY || null;
+    this.apiKey = process.env.MARRAKESH_API_KEY || null;
     this.endpoint =
-      process.env.MARRAKECH_ANALYTICS_ENDPOINT ||
+      process.env.MARRAKESH_ANALYTICS_ENDPOINT ||
       "https://www.marrakesh.dev/api/ingest";
-    this.isDisabled = process.env.MARRAKECH_ANALYTICS_DISABLED === "true";
+    this.isDisabled = process.env.MARRAKESH_ANALYTICS_DISABLED === "true";
     this.queue = {
       tool_calls: [],
       prompt_metadata: [],
@@ -189,9 +189,9 @@ export class AnalyticsClient {
     error: unknown,
     additionalInfo?: Record<string, unknown>,
   ): void {
-    if (process.env.MARRAKECH_DEBUG === "true") {
+    if (process.env.MARRAKESH_DEBUG === "true") {
       const errorInfo = {
-        context: `[Marrakech Analytics] ${context}`,
+        context: `[Marrakesh Analytics] ${context}`,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         endpoint: this.endpoint,
@@ -213,8 +213,8 @@ export class AnalyticsClient {
       // Validate and stringify JSON before sending
       const jsonString = this.validateAndStringifyJSON(data);
 
-      if (process.env.MARRAKECH_DEBUG === "true") {
-        console.log("[Marrakech Analytics] Sending batch to endpoint:", {
+      if (process.env.MARRAKESH_DEBUG === "true") {
+        console.log("[Marrakesh Analytics] Sending batch to endpoint:", {
           endpoint: this.endpoint,
           bodyLength: jsonString.length,
           bodyPreview: `${jsonString.substring(0, 200)}...`,
@@ -225,55 +225,48 @@ export class AnalyticsClient {
         });
       }
 
-      // Fire-and-forget: don't await the response
-      const fetchPromise = fetch(this.endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": this.apiKey || "",
-          "User-Agent": "Marrakech-SDK",
-        },
-        body: jsonString,
-      });
+      // Fire-and-forget: execute in next tick to avoid blocking
+      Promise.resolve().then(async () => {
+        try {
+          const response = await fetch(this.endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": this.apiKey || "",
+              "User-Agent": "Marrakesh-SDK",
+            },
+            body: jsonString,
+          });
 
-      // Handle the promise without blocking
-      if (fetchPromise && typeof fetchPromise.catch === "function") {
-        fetchPromise
-          .then(async (response) => {
-            // Only log errors, never log successful requests
-            if (!response.ok && process.env.MARRAKECH_DEBUG === "true") {
-              // Only consume response body for error cases
-              try {
-                const responseText = await response.text();
-                console.error("[Marrakech Analytics] Server error response:", {
-                  status: response.status,
-                  statusText: response.statusText,
-                  body: responseText,
-                  requestBody: `${jsonString.substring(0, 500)}...`,
-                });
-              } catch (responseError) {
-                this.logError("Error reading error response", responseError, {
-                  status: response.status,
-                  statusText: response.statusText,
-                });
-              }
-            }
-            // ✅ No logging for successful requests - completely silent
-          })
-          .catch((error) => {
-            // Only log network errors in debug mode
-            if (process.env.MARRAKECH_DEBUG === "true") {
-              this.logError("Network error sending batch", error, {
-                batchSize:
-                  (data.prompt_metadata?.length || 0) +
-                  (data.prompt_executions?.length || 0) +
-                  (data.tool_calls?.length || 0),
-                hasApiKey: !!this.apiKey,
+          // Only log errors, never log successful requests
+          if (!response.ok) {
+            try {
+              const responseText = await response.text();
+              console.error("[Marrakesh Analytics] Server error response:", {
+                status: response.status,
+                statusText: response.statusText,
+                body: responseText,
+                requestBody: `${jsonString.substring(0, 500)}...`,
+              });
+            } catch (responseError) {
+              this.logError("Error reading error response", responseError, {
+                status: response.status,
+                statusText: response.statusText,
               });
             }
-            // ✅ Silent by default - no console output unless debug mode is enabled
+          }
+          // ✅ No logging for successful requests - completely silent
+        } catch (error) {
+          // Only log network errors in debug mode
+          this.logError("Network error sending batch", error, {
+            batchSize:
+              (data.prompt_metadata?.length || 0) +
+              (data.prompt_executions?.length || 0) +
+              (data.tool_calls?.length || 0),
+            hasApiKey: !!this.apiKey,
           });
-      }
+        }
+      });
     } catch (error) {
       // Silently ignore any errors - analytics should never break user code
       this.logError("Error sending batch", error, {
@@ -297,8 +290,8 @@ export class AnalyticsClient {
       // Validate that the stringified JSON can be parsed back
       const parsed = JSON.parse(jsonString);
 
-      if (process.env.MARRAKECH_DEBUG === "true") {
-        console.log("[Marrakech Analytics] JSON validation successful:", {
+      if (process.env.MARRAKESH_DEBUG === "true") {
+        console.log("[Marrakesh Analytics] JSON validation successful:", {
           originalType: typeof data,
           stringifiedLength: jsonString.length,
           parsedKeys: Object.keys(parsed),

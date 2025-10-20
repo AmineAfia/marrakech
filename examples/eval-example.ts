@@ -1,8 +1,8 @@
 /**
- * Example: Testing prompts with Marrakech SDK
+ * Example: Testing prompts with Marrakesh SDK
  */
 
-import { prompt, tool, createVercelAIExecutor } from "marrakech-sdk";
+import { prompt, tool, createVercelAIExecutor } from "@marrakesh/core";
 import { z } from "zod";
 import { openai } from "@ai-sdk/openai";
 

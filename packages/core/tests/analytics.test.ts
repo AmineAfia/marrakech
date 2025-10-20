@@ -111,7 +111,7 @@ describe('AnalyticsClient', () => {
 
   describe('initialization', () => {
     it('should not track when API key is missing', () => {
-      delete process.env.MARRAKECH_API_KEY;
+      delete process.env.MARRAKESH_API_KEY;
       const client = AnalyticsClient.getInstance();
       
       // Should not throw and should be no-op
@@ -131,7 +131,7 @@ describe('AnalyticsClient', () => {
     });
 
     it('should track when API key is present', () => {
-      process.env.MARRAKECH_API_KEY = 'test-key';
+      process.env.MARRAKESH_API_KEY = "test-key";
       const client = AnalyticsClient.getInstance();
       
       client.trackPromptMetadata({
@@ -150,22 +150,22 @@ describe('AnalyticsClient', () => {
       expect(() => client.flush()).not.toThrow();
     });
 
-    it('should be disabled when MARRAKECH_ANALYTICS_DISABLED is true', () => {
-      process.env.MARRAKECH_API_KEY = 'test-key';
-      process.env.MARRAKECH_ANALYTICS_DISABLED = 'true';
+    it("should be disabled when MARRAKESH_ANALYTICS_DISABLED is true", () => {
+      process.env.MARRAKESH_API_KEY = "test-key";
+      process.env.MARRAKESH_ANALYTICS_DISABLED = "true";
       const client = AnalyticsClient.getInstance();
-      
+
       // Should be no-op
       expect(() => {
         client.trackPromptMetadata({
-          prompt_id: 'test',
-          name: 'test',
-          description: 'test',
-          prompt_text: 'test',
-          version: '1.0',
+          prompt_id: "test",
+          name: "test",
+          description: "test",
+          prompt_text: "test",
+          version: "1.0",
           is_active: 1,
-          account_id: '',
-          organization_id: '',
+          account_id: "",
+          organization_id: "",
           updated_at: new Date().toISOString(),
         });
       }).not.toThrow();
@@ -174,7 +174,7 @@ describe('AnalyticsClient', () => {
 
   describe('batching', () => {
     beforeEach(() => {
-      process.env.MARRAKECH_API_KEY = 'test-key';
+      process.env.MARRAKESH_API_KEY = "test-key";
     });
 
     it('should batch multiple events', async () => {
@@ -240,37 +240,38 @@ describe('AnalyticsClient', () => {
 
     it('should use custom endpoint when provided', () => {
       // Set the environment variable before creating the client
-      process.env.MARRAKECH_ANALYTICS_ENDPOINT = 'https://custom.example.com/api/ingest';
-      process.env.MARRAKECH_API_KEY = 'test-key';
-      
+      process.env.MARRAKESH_ANALYTICS_ENDPOINT =
+        "https://custom.example.com/api/ingest";
+      process.env.MARRAKESH_API_KEY = "test-key";
+
       // Reset singleton to pick up new env var
       (AnalyticsClient as any).instance = null;
       const client = AnalyticsClient.getInstance();
-      
+
       client.trackPromptMetadata({
-        prompt_id: 'test',
-        name: 'test',
-        description: 'test',
-        prompt_text: 'test',
-        version: '1.0',
+        prompt_id: "test",
+        name: "test",
+        description: "test",
+        prompt_text: "test",
+        version: "1.0",
         is_active: 1,
-        account_id: '',
-        organization_id: '',
+        account_id: "",
+        organization_id: "",
         updated_at: new Date().toISOString(),
       });
 
       client.flush();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://custom.example.com/api/ingest',
-        expect.any(Object)
+        "https://custom.example.com/api/ingest",
+        expect.any(Object),
       );
     });
   });
 
   describe('error handling', () => {
     beforeEach(() => {
-      process.env.MARRAKECH_API_KEY = 'test-key';
+      process.env.MARRAKESH_API_KEY = "test-key";
     });
 
     it('should not throw on network errors', async () => {
@@ -319,9 +320,9 @@ describe('AnalyticsClient', () => {
 
   describe('debug mode', () => {
     beforeEach(() => {
-      process.env.MARRAKECH_API_KEY = 'test-key';
-      process.env.MARRAKECH_DEBUG = 'true';
-      vi.spyOn(console, 'error').mockImplementation(() => {});
+      process.env.MARRAKESH_API_KEY = "test-key";
+      process.env.MARRAKESH_DEBUG = "true";
+      vi.spyOn(console, "error").mockImplementation(() => {});
     });
 
     afterEach(() => {
@@ -350,9 +351,9 @@ describe('AnalyticsClient', () => {
 
       expect(console.error).toHaveBeenCalled();
       expect(console.error).toHaveBeenCalledWith(
-        "[Marrakech Analytics] Network error sending batch",
+        "[Marrakesh Analytics] Network error sending batch",
         expect.objectContaining({
-          context: "[Marrakech Analytics] Network error sending batch",
+          context: "[Marrakesh Analytics] Network error sending batch",
           error: "Network error",
         }),
       );

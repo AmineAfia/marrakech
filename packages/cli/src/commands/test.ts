@@ -6,7 +6,7 @@ import { Command } from "commander";
 import { TestRunner } from "../runner/TestRunner.js";
 import { Reporter } from "../output/Reporter.js";
 import { Watcher } from "../watch/Watcher.js";
-import type { EvalResult } from "marrakech-sdk";
+import type { EvalResult } from "@marrakesh/core";
 
 interface TestOptions {
   watch?: boolean;

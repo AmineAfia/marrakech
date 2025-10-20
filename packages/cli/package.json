@@ -1,10 +1,10 @@
 {
-  "name": "marrakech",
+"name": "@marrakesh/cli",
   "version": "0.1.0",
-  "description": "CLI for testing Marrakech prompts",
+"description": "CLI for testing Marrakesh prompts",
   "type": "module",
   "bin": {
-    "marrakech": "./dist/index.js"
+    "marrakesh": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,7 +24,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "marrakech-sdk": "workspace:*",
+    "@marrakesh/core": "workspace:*",
     "commander": "^12.0.0",
     "glob": "^10.3.10",
     "chalk": "^5.3.0",

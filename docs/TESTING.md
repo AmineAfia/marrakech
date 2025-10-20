@@ -1,13 +1,13 @@
 # Testing Your Prompts
 
-Test your prompts like you test code. Marrakech provides a complete testing framework for prompt evaluation with automatic analytics tracking.
+Test your prompts like you test code. Marrakesh provides a complete testing framework for prompt evaluation with automatic analytics tracking.
 
 ## Quick Start
 
 ### 1. Add Tests to Your Prompts
 
 ```typescript
-import { prompt, tool, createVercelAIExecutor } from 'marrakech-sdk'
+import { prompt, tool, createVercelAIExecutor } from '@marrakesh/core'
 import { openai } from '@ai-sdk/openai'
 
 const weatherAgent = prompt('You are a weather assistant')
@@ -22,18 +22,18 @@ const weatherAgent = prompt('You are a weather assistant')
 
 ```bash
 # Run tests once
-npx marrakech test
+npx marrakesh test
 
 # Watch mode - reruns on changes
-npx marrakech test --watch
+npx marrakesh test --watch
 
 # Stop on first failure
-npx marrakech test --bail
+npx marrakesh test --bail
 ```
 
 ### 3. View Results
 
-Test results are automatically sent to your Marrakech dashboard where you can:
+Test results are automatically sent to your Marrakesh dashboard where you can:
 - View test run history
 - Track success rates over time
 - Analyze failures
@@ -115,7 +115,7 @@ Executors handle the actual AI execution with tool calling support.
 The primary executor for most use cases. Handles multi-step tool calling automatically.
 
 ```typescript
-import { createVercelAIExecutor } from 'marrakech-sdk'
+import { createVercelAIExecutor } from '@marrakesh/core'
 import { openai } from '@ai-sdk/openai'
 
 const executor = createVercelAIExecutor({
@@ -132,7 +132,7 @@ const executor = createVercelAIExecutor({
 Create your own executor for custom execution logic:
 
 ```typescript
-import type { Executor } from 'marrakech-sdk'
+import type { Executor } from '@marrakesh/core'
 
 const customExecutor: Executor = async (prompt, input, config) => {
   // Your custom execution logic
@@ -149,19 +149,19 @@ const customExecutor: Executor = async (prompt, input, config) => {
 
 ## CLI Commands
 
-### `marrakech test [pattern]`
+### `marrakesh test [pattern]`
 
 Run tests matching the glob pattern.
 
 ```bash
 # Test all files
-npx marrakech test
+npx marrakesh test
 
 # Test specific directory
-npx marrakech test "src/prompts/**/*.ts"
+npx marrakesh test "src/prompts/**/*.ts"
 
 # Test with options
-npx marrakech test --watch --concurrency 10
+npx marrakesh test --watch --concurrency 10
 ```
 
 **Options:**
@@ -248,7 +248,7 @@ The executor:
 
 ## Analytics Tracking
 
-Test results are automatically tracked and sent to your Marrakech dashboard:
+Test results are automatically tracked and sent to your Marrakesh dashboard:
 
 - **Test Runs**: Every time you run tests, metadata is recorded
 - **Test Cases**: Individual test results with pass/fail status
@@ -257,7 +257,7 @@ Test results are automatically tracked and sent to your Marrakech dashboard:
 
 Disable analytics:
 ```bash
-export MARRAKECH_ANALYTICS_DISABLED=true
+export MARRAKESH_ANALYTICS_DISABLED=true
 ```
 
 ## CI/CD Integration
@@ -276,9 +276,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: npm install
-      - run: npx marrakech test
+      - run: npx marrakesh test
         env:
-          MARRAKECH_API_KEY: ${{ secrets.MARRAKECH_API_KEY }}
+          MARRAKESH_API_KEY: ${{ secrets.MARRAKESH_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
@@ -286,7 +286,7 @@ jobs:
 
 ```bash
 # Run tests in watch mode while developing
-npx marrakech test --watch
+npx marrakesh test --watch
 
 # Press 'a' to run all tests
 # Press Ctrl+C to exit

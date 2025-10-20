@@ -19,7 +19,7 @@ import type { PromptBuilder } from "../PromptBuilder.js";
  *
  * @example
  * ```typescript
- * import { createVercelAIExecutor } from 'marrakech-sdk/executors'
+ * import { createVercelAIExecutor } from '@marrakesh/core/executors'
  * import { openai } from '@ai-sdk/openai'
  *
  * const executor = createVercelAIExecutor({

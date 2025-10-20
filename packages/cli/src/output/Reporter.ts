@@ -5,7 +5,7 @@
 import chalk from "chalk";
 import ora from "ora";
 import type { RunnerResults } from "../runner/TestRunner.js";
-import type { EvalResult, ExecutionStep } from "marrakech-sdk";
+import type { EvalResult, ExecutionStep } from "@marrakesh/core";
 import { formatDuration, formatDiff } from "./formatters.js";
 
 /**

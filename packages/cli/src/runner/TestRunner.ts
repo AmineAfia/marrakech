@@ -4,7 +4,7 @@
 
 import { glob } from "glob";
 import { pathToFileURL } from "node:url";
-import type { PromptWithTests, TestResults } from "marrakech-sdk";
+import type { PromptWithTests, TestResults } from "@marrakesh/core";
 
 export interface RunnerOptions {
   concurrency?: number;

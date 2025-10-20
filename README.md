@@ -1,17 +1,17 @@
-# Marrakech SDK
+# Marrakesh SDK
 
 Type-safe tool integration for LLMs.
 
 ## Installation
 
 ```bash
-npm install marrakech-sdk zod
+npm install @marrakesh/core zod
 ```
 
 ## Quick Start
 
 ```typescript
-import { prompt, tool } from 'marrakech-sdk';
+import { prompt, tool } from '@marrakesh/core';
 import { z } from 'zod';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
@@ -50,7 +50,7 @@ The SDK is fully compatible with both AI SDK v4 and v5, supporting both simple `
 
 ### AI SDK Compatibility
 
-Marrakech SDK is compatible with both AI SDK v4 and v5:
+Marrakesh SDK is compatible with both AI SDK v4 and v5:
 
 - **v4**: Uses `parameters` for tool definitions
 - **v5**: Uses `inputSchema` for tool definitions
@@ -68,7 +68,7 @@ Tool results must use the structured `LanguageModelV3ToolResultOutput` format:
 
 ```typescript
 import { convertToModelMessages } from 'ai';
-import { prompt } from 'marrakech-sdk';
+import { prompt } from '@marrakesh/core';
 
 // Works with convertToModelMessages output
 const p = prompt('You are a helpful assistant').tool(myTool);
@@ -234,10 +234,10 @@ The SDK includes optional analytics tracking to help you understand how your pro
 
 ### Activation
 
-Set the `MARRAKECH_API_KEY` environment variable:
+Set the `MARRAKESH_API_KEY` environment variable:
 
 ```bash
-export MARRAKECH_API_KEY="your-api-key-here"
+export MARRAKESH_API_KEY="your-api-key-here"
 ```
 
 Once set, analytics will automatically start tracking without any code changes.
@@ -250,21 +250,21 @@ Once set, analytics will automatically start tracking without any code changes.
 
 ### Privacy & Opt-out
 
-- All data is sent securely to Marrakech's analytics endpoint
+- All data is sent securely to Marrakesh's analytics endpoint
 - No sensitive information is collected
-- Disable anytime: `MARRAKECH_ANALYTICS_DISABLED=true`
-- Debug mode: `MARRAKECH_DEBUG=true` to see what data is being sent
+- Disable anytime: `MARRAKESH_ANALYTICS_DISABLED=true`
+- Debug mode: `MARRAKESH_DEBUG=true` to see what data is being sent
 
 For detailed information, see [Analytics Documentation](docs/ANALYTICS.md).
 
 ## Testing Your Prompts
 
-Test your prompts like you test code. Marrakech provides a complete testing framework with CLI support and automatic analytics tracking.
+Test your prompts like you test code. Marrakesh provides a complete testing framework with CLI support and automatic analytics tracking.
 
 ### Quick Example
 
 ```typescript
-import { prompt, createVercelAIExecutor } from 'marrakech-sdk'
+import { prompt, createVercelAIExecutor } from '@marrakesh/core'
 import { openai } from '@ai-sdk/openai'
 
 const weatherAgent = prompt('You are a weather assistant')
@@ -286,13 +286,13 @@ console.log(`${results.passed}/${results.total} tests passed`)
 
 ```bash
 # Run tests
-npx marrakech test
+npx marrakesh test
 
 # Watch mode - reruns on file changes
-npx marrakech test --watch
+npx marrakesh test --watch
 
 # Stop on first failure
-npx marrakech test --bail
+npx marrakesh test --bail
 ```
 
 ### Features

@@ -2,7 +2,7 @@
  * Formatters - Utility functions for formatting output
  */
 
-import type { TestResults } from "marrakech-sdk";
+import type { TestResults } from "@marrakesh/core";
 
 /**
  * Format duration in a human-readable way
