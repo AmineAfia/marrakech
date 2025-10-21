@@ -22,7 +22,7 @@ ${JSON.stringify(jsonSchema, null, 2)}
   }
 
   // Get tools
-  const tools = promptBuilder.tools.map((tool) => {
+  const tools = promptBuilder.toolsList.map((tool) => {
     const metadata = extractToolMetadata(tool);
     return {
       name: (tool as { name?: string }).name || "unnamed",

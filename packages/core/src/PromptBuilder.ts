@@ -19,8 +19,15 @@ import { PromptWithTests } from "./testing/PromptWithTests.js";
 
 export class PromptBuilder {
   public systemPrompt: string;
-  public tools: ToolFunction[] = [];
+  private _tools: ToolFunction[] = [];
   public outputFormat?: OutputFormat;
+
+  /**
+   * Get the current tools array
+   */
+  get toolsList(): ToolFunction[] {
+    return this._tools;
+  }
   private sessionId: string;
   private analyticsClient: AnalyticsClient;
   private static trackedPrompts = new Set<string>();
@@ -47,7 +54,15 @@ export class PromptBuilder {
    * Add tools (variadic)
    */
   tool(...tools: ToolFunction[]): this {
-    this.tools.push(...tools);
+    this._tools.push(...tools);
+    return this;
+  }
+
+  /**
+   * Add tools from an array
+   */
+  tools(tools: ToolFunction[]): this {
+    this._tools.push(...tools);
     return this;
   }
 
@@ -120,7 +135,7 @@ export class PromptBuilder {
     description: string;
     parameters: object;
   }> {
-    return this.tools.map((tool) => {
+    return this._tools.map((tool) => {
       const metadata = extractToolMetadata(tool);
       return {
         name: (tool as { name?: string }).name || "unnamed",
@@ -157,7 +172,7 @@ export class PromptBuilder {
     > = {};
     const usedNames = new Set<string>();
 
-    for (const tool of this.tools) {
+    for (const tool of this._tools) {
       const metadata = extractToolMetadata(tool);
       let name = (tool as { name?: string }).name || "unnamed";
 
@@ -295,7 +310,7 @@ export class PromptBuilder {
     };
   } {
     const executionId = generateExecutionId();
-    const toolNames = this.tools.map(
+    const toolNames = this._tools.map(
       (tool) => (tool as { name?: string }).name || "unnamed",
     );
     const promptId = generatePromptId(this.systemPrompt, toolNames);
@@ -325,7 +340,8 @@ ${JSON.stringify(jsonSchema, null, 2)}
 
     return {
       messages: allMessages,
-      tools: Object.keys(tools).length > 0 ? tools : undefined
+      tools: Object.keys(tools).length > 0 ? tools : undefined,
+      responseFormat: this.getResponseFormat(),
     };
   }
 
@@ -341,7 +357,7 @@ ${JSON.stringify(jsonSchema, null, 2)}
     };
   } {
     const executionId = generateExecutionId();
-    const toolNames = this.tools.map(
+    const toolNames = this._tools.map(
       (tool) => (tool as { name?: string }).name || "unnamed",
     );
     const promptId = generatePromptId(this.systemPrompt, toolNames);
@@ -376,7 +392,7 @@ ${JSON.stringify(jsonSchema, null, 2)}
     tools?: Array<{ name: string; description: string; parameters: object }>;
   } {
     const executionId = generateExecutionId();
-    const toolNames = this.tools.map(
+    const toolNames = this._tools.map(
       (tool) => (tool as { name?: string }).name || "unnamed",
     );
     const promptId = generatePromptId(this.systemPrompt, toolNames);
