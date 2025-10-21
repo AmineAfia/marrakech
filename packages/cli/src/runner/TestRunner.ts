@@ -7,7 +7,6 @@ import { pathToFileURL } from "node:url";
 import type { PromptWithTests, TestResults } from "@marrakesh/core";
 
 export interface RunnerOptions {
-  concurrency?: number;
   bail?: boolean;
 }
 
@@ -32,7 +31,6 @@ export class TestRunner {
 
   constructor(options: RunnerOptions = {}) {
     this.options = {
-      concurrency: options.concurrency ?? 5,
       bail: options.bail ?? false,
     };
   }
@@ -160,35 +158,11 @@ export class TestRunner {
 
     for (const { name, prompt } of prompts) {
       try {
-        // Get test cases first to fire test-start events
-        const testCases = prompt.getTestCases();
-
-        // Fire test-start events for each test case
-        for (let index = 0; index < testCases.length; index++) {
-          const testCase = testCases[index];
-          this.progressCallback?.({
-            type: "test-start",
-            data: {
-              current: index + 1,
-              total: testCases.length,
-              input: testCase.input,
-            },
-          });
-        }
-
-        // Run the tests (this will trigger analytics tracking)
+        // Run the tests with progress callback (this will trigger analytics tracking)
         const results = await prompt.run({
-          concurrency: this.options.concurrency,
           bail: this.options.bail,
+          onProgress: this.progressCallback,
         });
-
-        // Fire test-complete events for each result
-        for (const result of results.results) {
-          this.progressCallback?.({
-            type: "test-complete",
-            data: result,
-          });
-        }
 
         promptResults.push({
           promptName: name,

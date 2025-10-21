@@ -33,15 +33,12 @@ npx marrakesh test --watch
 # Stop on first failure
 npx marrakesh test --bail
 
-# Run tests in parallel
-npx marrakesh test --concurrency 10
 ```
 
 **Options:**
 
 - `-w, --watch`: Watch mode - rerun tests on file changes
 - `--bail`: Stop on first failure
-- `-c, --concurrency <n>`: Number of parallel tests (default: 5)
 
 ## Usage
 

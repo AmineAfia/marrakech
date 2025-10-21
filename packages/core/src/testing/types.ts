@@ -74,14 +74,14 @@ export interface TestResults {
 export interface TestRunOptions {
   /** Stop on first failure */
   bail?: boolean;
-  /** Maximum number of concurrent tests */
-  concurrency?: number;
   /** Executor to use for running tests */
   executor?: Executor;
   /** Callback when a test starts */
   onTestStart?: (testCase: TestCase) => void;
   /** Callback when a test completes */
   onTestComplete?: (result: EvalResult) => void;
+  /** Callback for progress events (test-start, test-complete) */
+  onProgress?: (event: { type: string; data: unknown }) => void;
 }
 
 /**
