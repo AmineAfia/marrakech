@@ -112,13 +112,26 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
 
       // Extract final output
       let output: unknown;
+      const resultObj = result as Record<string, unknown>;
+
       if (responseFormat?.type === "json_schema") {
-        // Structured output - parse JSON
-        try {
-          output = JSON.parse((result as { text: string }).text);
-        } catch (parseError) {
-          // If JSON parsing fails, return raw text
-          output = (result as { text: string }).text;
+        // Check if we expect structured output
+        // Try to parse JSON from the model's text response
+        if (resultObj.text && typeof resultObj.text === "string") {
+          const trimmedText = resultObj.text.trim();
+          if (trimmedText) {
+            try {
+              output = JSON.parse(trimmedText);
+            } catch (parseError) {
+              // If JSON parsing fails, return the raw text
+              output = trimmedText;
+            }
+          } else {
+            output = "";
+          }
+        } else {
+          // No text response, return empty string
+          output = "";
         }
       } else {
         // Text output - but check if we have tool results instead
