@@ -110,10 +110,6 @@ export class PromptWithTests {
     // Track test run (fire-and-forget, non-blocking)
     this.trackTestRunResult(finalResults, testRunId, promptId);
 
-    // Wait for all analytics requests to complete before returning (CLI use case)
-    const analyticsClient = AnalyticsClient.getInstance();
-    await analyticsClient.waitForPendingRequests();
-
     return finalResults;
   }
 

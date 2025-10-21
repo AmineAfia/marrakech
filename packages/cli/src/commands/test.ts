@@ -38,14 +38,14 @@ export const testCommand = new Command("test")
           bail: options.bail || false,
         });
 
-        // Track results in real-time
+        // Track results in real-time for progress reporting
         let totalTests = 0;
         let completedTests = 0;
         let passedTests = 0;
         let failedTests = 0;
         const allResults: EvalResult[] = [];
 
-        // Set up progress callback
+        // Set up progress callback for real-time reporting
         runner.setProgressCallback((event) => {
           if (event.type === "test-start") {
             const data = event.data as {
@@ -65,35 +65,6 @@ export const testCommand = new Command("test")
               failedTests++;
             }
             reporter.testCompleted(result);
-
-            // Show final summary immediately when all tests are done
-            if (completedTests === totalTests) {
-              const finalResults = {
-                total: totalTests,
-                passed: passedTests,
-                failed: failedTests,
-                duration: allResults.reduce((sum, r) => sum + r.duration, 0),
-                promptResults: [
-                  {
-                    promptName: "test",
-                    results: {
-                      total: totalTests,
-                      passed: passedTests,
-                      failed: failedTests,
-                      duration: allResults.reduce(
-                        (sum, r) => sum + r.duration,
-                        0,
-                      ),
-                      results: allResults,
-                    },
-                  },
-                ],
-              };
-              reporter.printResults(finalResults);
-
-              // Exit immediately after showing results
-              process.exit(failedTests > 0 ? 1 : 0);
-            }
           }
         });
 
@@ -102,8 +73,17 @@ export const testCommand = new Command("test")
         const files = await runner.findTestFiles(pattern);
         reporter.fileDiscovered(files.length);
 
-        // Don't wait for the full results, just let the progress callback handle everything
-        await runner.findAndRun(pattern);
+        // Wait for the full results to complete (this ensures analytics are sent)
+        const results = await runner.findAndRun(pattern);
+
+        // Show final summary
+        reporter.printResults(results);
+
+        // Wait 1 second for analytics to complete before exiting
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Exit with appropriate code
+        process.exit(results.failed > 0 ? 1 : 0);
       }
     } catch (error) {
       reporter.error(error instanceof Error ? error.message : String(error));
