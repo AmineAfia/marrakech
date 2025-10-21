@@ -11,7 +11,6 @@ import type { EvalResult } from "@marrakesh/core";
 interface TestOptions {
   watch?: boolean;
   bail?: boolean;
-  concurrency?: string;
 }
 
 export const testCommand = new Command("test")
@@ -19,16 +18,13 @@ export const testCommand = new Command("test")
   .argument("[pattern]", "File pattern to test", "**/*.{ts,js}")
   .option("-w, --watch", "Watch mode - rerun tests on file changes")
   .option("--bail", "Stop on first failure")
-  .option("-c, --concurrency <n>", "Number of parallel tests", "5")
   .action(async (pattern: string, options: TestOptions) => {
     const reporter = new Reporter();
-    const concurrency = Number.parseInt(options.concurrency || "5", 10);
 
     try {
       if (options.watch) {
         // Watch mode
         const watcher = new Watcher(pattern, {
-          concurrency,
           bail: options.bail || false,
         });
 
@@ -39,7 +35,6 @@ export const testCommand = new Command("test")
       } else {
         // Single run
         const runner = new TestRunner({
-          concurrency,
           bail: options.bail || false,
         });
 
@@ -111,9 +106,7 @@ export const testCommand = new Command("test")
         await runner.findAndRun(pattern);
       }
     } catch (error) {
-      reporter.error(
-        error instanceof Error ? error.message : String(error),
-      );
+      reporter.error(error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });

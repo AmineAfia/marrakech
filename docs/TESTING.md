@@ -93,7 +93,6 @@ Run all test cases.
 ```typescript
 const results = await weatherAgent.run({
   executor: createVercelAIExecutor({ model: openai('gpt-4') }),
-  concurrency: 5,
   bail: false
 })
 ```
@@ -101,7 +100,6 @@ const results = await weatherAgent.run({
 **Parameters:**
 - `options`:
   - `executor` (Executor, optional): Overrides default executor
-  - `concurrency` (number, optional): Number of parallel tests (default: 1)
   - `bail` (boolean, optional): Stop on first failure (default: false)
 
 **Returns:** `Promise<TestResults>`
@@ -161,13 +159,12 @@ npx marrakesh test
 npx marrakesh test "src/prompts/**/*.ts"
 
 # Test with options
-npx marrakesh test --watch --concurrency 10
+npx marrakesh test --watch
 ```
 
 **Options:**
 - `-w, --watch`: Watch mode
 - `--bail`: Stop on first failure
-- `-c, --concurrency <n>`: Number of parallel tests (default: 5)
 
 ## Test Patterns
 

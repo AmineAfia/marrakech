@@ -232,31 +232,6 @@ describe("PromptWithTests.run()", () => {
     expect(results.results[0].duration).toBeGreaterThan(40);
   });
 
-  it("should run tests with concurrency", async () => {
-    const executionOrder: number[] = [];
-    const mockExecutor: Executor = async (_prompt, input) => {
-      const testNum = Number.parseInt(input.replace("test", ""), 10);
-      executionOrder.push(testNum);
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      return {
-        output: "response",
-        steps: [],
-        finishReason: "stop",
-      };
-    };
-
-    const p = prompt("Test prompt").test([
-      { input: "test1" },
-      { input: "test2" },
-      { input: "test3" },
-      { input: "test4" },
-    ]);
-
-    await p.run({ executor: mockExecutor, concurrency: 2 });
-
-    // With concurrency 2, tests should run in batches
-    expect(executionOrder).toHaveLength(4);
-  });
 });
 
 describe("PromptBuilder.eval()", () => {

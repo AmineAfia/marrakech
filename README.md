@@ -301,7 +301,6 @@ npx marrakesh test --bail
 - **🔄 Watch Mode**: Auto-rerun tests on file changes
 - **🤖 Agentic Support**: Handles multi-step tool calling automatically
 - **📊 Analytics**: Test results automatically tracked to dashboard
-- **⚡ Parallel Execution**: Run tests concurrently for speed
 - **✅ Assertions**: Deep equality matching with partial object support
 
 For complete documentation, see [Testing Guide](docs/TESTING.md).

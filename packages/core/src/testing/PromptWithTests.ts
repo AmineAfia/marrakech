@@ -65,50 +65,37 @@ export class PromptWithTests {
     );
     const promptId = generatePromptId(this.prompt.systemPrompt, toolNames);
 
-    // Run tests sequentially or with concurrency
-    const concurrency = options?.concurrency ?? 1;
+    // Run tests sequentially
+    for (let index = 0; index < this.testCases.length; index++) {
+      const testCase = this.testCases[index];
 
-    if (concurrency === 1) {
-      // Sequential execution
-      for (const testCase of this.testCases) {
-        options?.onTestStart?.(testCase);
-        const result = await this.runSingle(testCase, executor);
-        options?.onTestComplete?.(result);
-        results.push(result);
+      // Fire test-start progress event
+      options?.onProgress?.({
+        type: "test-start",
+        data: {
+          current: index + 1,
+          total: this.testCases.length,
+          input: testCase.input,
+        },
+      });
 
-        // Track individual test case (fire-and-forget, non-blocking)
-        this.trackTestCaseResult(result, testRunId, promptId);
+      options?.onTestStart?.(testCase);
+      const result = await this.runSingle(testCase, executor);
+      options?.onTestComplete?.(result);
 
-        if (options?.bail && !result.passed) {
-          break;
-        }
-      }
-    } else {
-      // Parallel execution with concurrency limit
-      const chunks: TestCase[][] = [];
-      for (let i = 0; i < this.testCases.length; i += concurrency) {
-        chunks.push(this.testCases.slice(i, i + concurrency));
-      }
+      // Fire test-complete progress event
+      options?.onProgress?.({
+        type: "test-complete",
+        data: result,
+      });
 
-      for (const chunk of chunks) {
-        const chunkResults = await Promise.all(
-          chunk.map(async (tc) => {
-            options?.onTestStart?.(tc);
-            const result = await this.runSingle(tc, executor);
-            options?.onTestComplete?.(result);
-            return result;
-          }),
-        );
-        results.push(...chunkResults);
+      results.push(result);
 
-        // Track test cases (fire-and-forget, non-blocking)
-        for (const result of chunkResults) {
-          this.trackTestCaseResult(result, testRunId, promptId);
-        }
+      // Track individual test case (fire-and-forget, non-blocking)
+      this.trackTestCaseResult(result, testRunId, promptId);
 
-        if (options?.bail && chunkResults.some((r) => !r.passed)) {
-          break;
-        }
+      if (options?.bail && !result.passed) {
+        break;
       }
     }
 
