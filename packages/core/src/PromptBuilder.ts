@@ -311,14 +311,21 @@ export class PromptBuilder {
       content: this.systemPrompt,
     };
 
+    // Add output format instructions if schema is defined
+    if (this.outputFormat?.type === "json" && this.outputFormat.schema) {
+      const jsonSchema = zodToJsonSchema(this.outputFormat.schema);
+      systemMessage.content += `\n\n<output_format>
+Respond with valid JSON matching this schema:
+${JSON.stringify(jsonSchema, null, 2)}
+</output_format>`;
+    }
+
     const allMessages = [systemMessage, ...messages];
     const tools = this.getToolsForVercelAI(executionId, promptId);
-    const responseFormat = this.getResponseFormat();
 
     return {
       messages: allMessages,
-      tools: Object.keys(tools).length > 0 ? tools : undefined,
-      responseFormat,
+      tools: Object.keys(tools).length > 0 ? tools : undefined
     };
   }
 
