@@ -21,6 +21,35 @@ export * from "./analytics/index.js";
 // Message utilities
 export * from "./utils/messageUtils.js";
 
+// Testing utilities
+export { PromptWithTests } from "./testing/PromptWithTests.js";
+export {
+  match,
+  matchPartial,
+  formatDiff,
+  MatchError,
+} from "./testing/matchers.js";
+export type {
+  TestCase,
+  EvalOptions,
+  EvalResult,
+  TestResults,
+  TestRunOptions,
+  TestRunMetadata,
+} from "./testing/types.js";
+
+// Executor utilities
+export {
+  createVercelAIExecutor,
+  createExecutor,
+} from "./executors/index.js";
+export type {
+  Executor,
+  ExecutorConfig,
+  ExecutionResult,
+  ExecutionStep,
+} from "./executors/types.js";
+
 // Types
 export type {
   CoreMessage,

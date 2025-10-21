@@ -14,8 +14,10 @@ export {
   generateExecutionId,
   generateSessionId,
   generateToolCallId,
+  generateTestRunId,
+  generateTestCaseId,
   estimateTokens,
   estimateCost,
   getCurrentTimestamp,
-  extractToolNames
-} from './utils.js';
+  extractToolNames,
+} from "./utils.js";

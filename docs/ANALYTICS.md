@@ -1,6 +1,6 @@
 # Analytics Documentation
 
-The Marrakech SDK includes optional analytics tracking that helps you understand how your prompts and tools are being used. Analytics are completely opt-in and designed to have zero impact on your application's performance.
+The Marrakesh SDK includes optional analytics tracking that helps you understand how your prompts and tools are being used. Analytics are completely opt-in and designed to have zero impact on your application's performance.
 
 ## Overview
 
@@ -12,10 +12,10 @@ Analytics tracking captures three types of data:
 
 ## Activation
 
-Analytics are activated by setting the `MARRAKECH_API_KEY` environment variable:
+Analytics are activated by setting the `MARRAKESH_API_KEY` environment variable:
 
 ```bash
-export MARRAKECH_API_KEY="your-api-key-here"
+export MARRAKESH_API_KEY="your-api-key-here"
 ```
 
 Once set, analytics will automatically start tracking without any code changes.
@@ -49,7 +49,7 @@ Once set, analytics will automatically start tracking without any code changes.
 ## Privacy and Security
 
 ### Data Handling
-- All data is sent to Marrakech's secure analytics endpoint
+- All data is sent to Marrakesh's secure analytics endpoint
 - No sensitive information is collected
 - Tool inputs/outputs are tracked for usage analysis only
 - All data transmission is encrypted
@@ -57,9 +57,9 @@ Once set, analytics will automatically start tracking without any code changes.
 ### Opt-out Options
 You can disable analytics in several ways:
 
-1. **Remove API key**: Don't set `MARRAKECH_API_KEY`
-2. **Environment variable**: Set `MARRAKECH_ANALYTICS_DISABLED=true`
-3. **Debug mode**: Set `MARRAKECH_DEBUG=true` to see what data is being sent
+1. **Remove API key**: Don't set `MARRAKESH_API_KEY`
+2. **Environment variable**: Set `MARRAKESH_ANALYTICS_DISABLED=true`
+3. **Debug mode**: Set `MARRAKESH_DEBUG=true` to see what data is being sent
 
 ## Configuration
 
@@ -67,10 +67,10 @@ You can disable analytics in several ways:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MARRAKECH_API_KEY` | Required for analytics | None |
+| `MARRAKESH_API_KEY` | Required for analytics | None |
 | `MARRAKESH_ANALYTICS_ENDPOINT` | Custom analytics endpoint | `https://marrakesh.dev/api/ingest` |
-| `MARRAKECH_ANALYTICS_DISABLED` | Disable analytics even with API key | `false` |
-| `MARRAKECH_DEBUG` | Enable debug logging | `false` |
+| `MARRAKESH_ANALYTICS_DISABLED` | Disable analytics even with API key | `false` |
+| `MARRAKESH_DEBUG` | Enable debug logging | `false` |
 
 ### Custom Endpoint
 
@@ -156,16 +156,16 @@ interface ToolCall {
 ## Troubleshooting
 
 ### Analytics Not Working
-1. Check that `MARRAKECH_API_KEY` is set
-2. Verify `MARRAKECH_ANALYTICS_DISABLED` is not set to `true`
-3. Enable debug mode: `MARRAKECH_DEBUG=true`
+1. Check that `MARRAKESH_API_KEY` is set
+2. Verify `MARRAKESH_ANALYTICS_DISABLED` is not set to `true`
+3. Enable debug mode: `MARRAKESH_DEBUG=true`
 4. Check network connectivity to analytics endpoint
 
 ### Debug Mode
 Enable debug logging to see what's happening:
 
 ```bash
-export MARRAKECH_DEBUG=true
+export MARRAKESH_DEBUG=true
 ```
 
 This will show:
@@ -191,7 +191,7 @@ Analytics data is minimal:
 ## Support
 
 For analytics-related issues:
-1. Check the debug logs with `MARRAKECH_DEBUG=true`
+1. Check the debug logs with `MARRAKESH_DEBUG=true`
 2. Verify your API key is correct
 3. Ensure network connectivity to the analytics endpoint
 4. Contact support if issues persist

@@ -8,6 +8,8 @@ import type {
   PromptMetadata,
   PromptExecution,
   IngestionRequest,
+  TestRun,
+  TestCaseResult,
 } from "./types.js";
 
 export class AnalyticsClient {
@@ -15,23 +17,14 @@ export class AnalyticsClient {
   private readonly apiKey: string | null;
   private readonly endpoint: string;
   private readonly isDisabled: boolean;
-  private queue: IngestionRequest;
-  private flushTimeout?: NodeJS.Timeout;
+  private inFlightRequests: Set<Promise<void>> = new Set();
 
   private constructor() {
-    this.apiKey = process.env.MARRAKECH_API_KEY || null;
+    this.apiKey = process.env.MARRAKESH_API_KEY || null;
     this.endpoint =
-      process.env.MARRAKECH_ANALYTICS_ENDPOINT ||
+      process.env.MARRAKESH_ANALYTICS_ENDPOINT ||
       "https://www.marrakesh.dev/api/ingest";
-    this.isDisabled = process.env.MARRAKECH_ANALYTICS_DISABLED === "true";
-    this.queue = { tool_calls: [], prompt_metadata: [], prompt_executions: [] };
-
-    // Set up process exit handler for cleanup
-    if (typeof process !== "undefined") {
-      process.on("beforeExit", () => {
-        this.flush();
-      });
-    }
+    this.isDisabled = process.env.MARRAKESH_ANALYTICS_DISABLED === "true";
   }
 
   /**
@@ -51,8 +44,13 @@ export class AnalyticsClient {
     if (!this.shouldTrack()) return;
 
     try {
-      this.queue.prompt_metadata.push(data);
-      this.scheduleFlush();
+      this.sendEvent({
+        prompt_metadata: [data],
+        prompt_executions: [],
+        tool_calls: [],
+        test_runs: [],
+        test_cases: [],
+      });
     } catch (error) {
       this.logError("Failed to track prompt metadata", error);
     }
@@ -65,8 +63,13 @@ export class AnalyticsClient {
     if (!this.shouldTrack()) return;
 
     try {
-      this.queue.prompt_executions.push(data);
-      this.scheduleFlush();
+      this.sendEvent({
+        prompt_metadata: [],
+        prompt_executions: [data],
+        tool_calls: [],
+        test_runs: [],
+        test_cases: [],
+      });
     } catch (error) {
       this.logError("Failed to track prompt execution", error);
     }
@@ -79,24 +82,65 @@ export class AnalyticsClient {
     if (!this.shouldTrack()) return;
 
     try {
-      this.queue.tool_calls.push(data);
-      this.scheduleFlush();
+      this.sendEvent({
+        prompt_metadata: [],
+        prompt_executions: [],
+        tool_calls: [data],
+        test_runs: [],
+        test_cases: [],
+      });
     } catch (error) {
       this.logError("Failed to track tool call", error);
     }
   }
 
   /**
-   * Flush all pending events to the server
+   * Track test run
    */
-  public flush(): void {
-    if (!this.shouldTrack() || this.isEmpty()) return;
+  public trackTestRun(data: TestRun): void {
+    if (!this.shouldTrack()) return;
 
     try {
-      this.sendBatch(this.queue);
-      this.clearQueue();
+      if (process.env.MARRAKESH_DEBUG === "true") {
+        console.log(
+          "[Marrakesh Analytics] Tracking test run:",
+          JSON.stringify(data, null, 2),
+        );
+      }
+      this.sendEvent({
+        prompt_metadata: [],
+        prompt_executions: [],
+        tool_calls: [],
+        test_runs: [data],
+        test_cases: [],
+      });
     } catch (error) {
-      this.logError("Failed to flush analytics", error);
+      this.logError("Failed to track test run", error);
+    }
+  }
+
+  /**
+   * Track test case result
+   */
+  public trackTestCase(data: TestCaseResult): void {
+    if (!this.shouldTrack()) return;
+
+    try {
+      if (process.env.MARRAKESH_DEBUG === "true") {
+        console.log(
+          "[Marrakesh Analytics] Tracking test case:",
+          JSON.stringify(data, null, 2),
+        );
+      }
+      this.sendEvent({
+        prompt_metadata: [],
+        prompt_executions: [],
+        tool_calls: [],
+        test_runs: [],
+        test_cases: [data],
+      });
+    } catch (error) {
+      this.logError("Failed to track test case", error);
     }
   }
 
@@ -108,40 +152,6 @@ export class AnalyticsClient {
   }
 
   /**
-   * Check if queue is empty
-   */
-  private isEmpty(): boolean {
-    return (
-      this.queue.tool_calls.length === 0 &&
-      this.queue.prompt_metadata.length === 0 &&
-      this.queue.prompt_executions.length === 0
-    );
-  }
-
-  /**
-   * Schedule automatic flush with debouncing
-   */
-  private scheduleFlush(): void {
-    if (this.flushTimeout) {
-      clearTimeout(this.flushTimeout);
-    }
-
-    this.flushTimeout = setTimeout(() => {
-      this.flush();
-    }, 100);
-
-    // Also flush if queue gets large
-    const totalEvents =
-      this.queue.tool_calls.length +
-      this.queue.prompt_metadata.length +
-      this.queue.prompt_executions.length;
-
-    if (totalEvents >= 50) {
-      this.flush();
-    }
-  }
-
-  /**
    * Log analytics errors with consistent formatting
    */
   private logError(
@@ -149,9 +159,9 @@ export class AnalyticsClient {
     error: unknown,
     additionalInfo?: Record<string, unknown>,
   ): void {
-    if (process.env.MARRAKECH_DEBUG === "true") {
+    if (process.env.MARRAKESH_DEBUG === "true") {
       const errorInfo = {
-        context: `[Marrakech Analytics] ${context}`,
+        context: `[Marrakesh Analytics] ${context}`,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         endpoint: this.endpoint,
@@ -164,131 +174,84 @@ export class AnalyticsClient {
   }
 
   /**
-   * Send batch of events to the server (fire-and-forget)
+   * Send event to the server (fire-and-forget)
    */
-  private async sendBatch(data: IngestionRequest): Promise<void> {
-    if (this.isEmpty()) return;
-
+  private sendEvent(data: IngestionRequest): void {
     try {
-      // Validate and stringify JSON before sending
-      const jsonString = this.validateAndStringifyJSON(data);
-
-      if (process.env.MARRAKECH_DEBUG === "true") {
-        console.log("[Marrakech Analytics] Sending batch to endpoint:", {
-          endpoint: this.endpoint,
-          bodyLength: jsonString.length,
-          bodyPreview: `${jsonString.substring(0, 200)}...`,
-          batchSize:
-            (data.prompt_metadata?.length || 0) +
-            (data.prompt_executions?.length || 0) +
-            (data.tool_calls?.length || 0),
-        });
-      }
-
-      // Fire-and-forget: don't await the response
-      const fetchPromise = fetch(this.endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": this.apiKey || "",
-          "User-Agent": "Marrakech-SDK",
-        },
-        body: jsonString,
-      });
-
-      // Handle the promise without blocking
-      if (fetchPromise && typeof fetchPromise.catch === "function") {
-        fetchPromise
-          .then(async (response) => {
-            // Only log errors, never log successful requests
-            if (!response.ok && process.env.MARRAKECH_DEBUG === "true") {
-              // Only consume response body for error cases
-              try {
-                const responseText = await response.text();
-                console.error("[Marrakech Analytics] Server error response:", {
-                  status: response.status,
-                  statusText: response.statusText,
-                  body: responseText,
-                  requestBody: `${jsonString.substring(0, 500)}...`,
-                });
-              } catch (responseError) {
-                this.logError("Error reading error response", responseError, {
-                  status: response.status,
-                  statusText: response.statusText,
-                });
-              }
-            }
-            // ✅ No logging for successful requests - completely silent
-          })
-          .catch((error) => {
-            // Only log network errors in debug mode
-            if (process.env.MARRAKECH_DEBUG === "true") {
-              this.logError("Network error sending batch", error, {
-                batchSize:
-                  (data.prompt_metadata?.length || 0) +
-                  (data.prompt_executions?.length || 0) +
-                  (data.tool_calls?.length || 0),
-                hasApiKey: !!this.apiKey,
-              });
-            }
-            // ✅ Silent by default - no console output unless debug mode is enabled
-          });
-      }
-    } catch (error) {
-      // Silently ignore any errors - analytics should never break user code
-      this.logError("Error sending batch", error, {
-        batchSize:
-          (data.prompt_metadata?.length || 0) +
-          (data.prompt_executions?.length || 0) +
-          (data.tool_calls?.length || 0),
-        hasApiKey: !!this.apiKey,
-      });
-    }
-  }
-
-  /**
-   * Validate and stringify JSON data before sending
-   */
-  private validateAndStringifyJSON(data: IngestionRequest): string {
-    try {
-      // First, validate that the data can be stringified
       const jsonString = JSON.stringify(data);
 
-      // Validate that the stringified JSON can be parsed back
-      const parsed = JSON.parse(jsonString);
+      if (process.env.MARRAKESH_DEBUG === "true") {
+        const totalEvents =
+          (data.tool_calls?.length || 0) +
+          (data.prompt_metadata?.length || 0) +
+          (data.prompt_executions?.length || 0) +
+          (data.test_runs?.length || 0) +
+          (data.test_cases?.length || 0);
 
-      if (process.env.MARRAKECH_DEBUG === "true") {
-        console.log("[Marrakech Analytics] JSON validation successful:", {
-          originalType: typeof data,
-          stringifiedLength: jsonString.length,
-          parsedKeys: Object.keys(parsed),
-          hasToolCalls: Array.isArray(parsed.tool_calls),
-          hasPromptMetadata: Array.isArray(parsed.prompt_metadata),
-          hasPromptExecutions: Array.isArray(parsed.prompt_executions),
+        console.log("[Marrakesh Analytics] Sending event:", {
+          endpoint: this.endpoint,
+          bodyLength: jsonString.length,
+          totalEvents,
+          toolCalls: data.tool_calls?.length || 0,
+          promptMetadata: data.prompt_metadata?.length || 0,
+          promptExecutions: data.prompt_executions?.length || 0,
+          testRuns: data.test_runs?.length || 0,
+          testCases: data.test_cases?.length || 0,
         });
+
+        console.log("[Marrakesh Analytics] Full request payload:", jsonString);
       }
 
-      return jsonString;
-    } catch (error) {
-      this.logError("JSON validation failed", error, {
-        dataType: typeof data,
-        dataKeys: Object.keys(data),
-        dataStringified: JSON.stringify(data, null, 2).substring(0, 500),
+      // Create promise for tracking
+      const requestPromise = (async () => {
+        try {
+          const response = await fetch(this.endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": this.apiKey || "",
+              "User-Agent": "Marrakesh-SDK",
+            },
+            body: jsonString,
+          });
+
+          if (!response.ok) {
+            const responseText = await response.text();
+            console.error(
+              `[Marrakesh Analytics] Error response (${response.status}):`,
+              responseText,
+            );
+          }
+        } catch (error) {
+          this.logError("Analytics request failed", error);
+        }
+      })();
+
+      // Track this request and clean up when done
+      this.inFlightRequests.add(requestPromise);
+      requestPromise.finally(() => {
+        this.inFlightRequests.delete(requestPromise);
       });
 
-      // Return a minimal valid JSON structure as fallback
-      return JSON.stringify({
-        tool_calls: [],
-        prompt_metadata: [],
-        prompt_executions: [],
-      });
+      // Fire-and-forget: don't await
+      void requestPromise;
+    } catch (error) {
+      this.logError("Failed to send analytics event", error);
     }
   }
 
   /**
-   * Clear the queue after successful send
+   * Wait for all pending HTTP requests to complete (useful for CLI/testing)
    */
-  private clearQueue(): void {
-    this.queue = { tool_calls: [], prompt_metadata: [], prompt_executions: [] };
+  public async waitForPendingRequests(): Promise<void> {
+    if (this.inFlightRequests.size === 0) return;
+
+    if (process.env.MARRAKESH_DEBUG === "true") {
+      console.log(
+        `[Marrakesh Analytics] Waiting for ${this.inFlightRequests.size} pending requests...`,
+      );
+    }
+
+    await Promise.all(Array.from(this.inFlightRequests));
   }
 }

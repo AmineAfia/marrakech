@@ -1,7 +1,7 @@
 // Example: Vercel AI SDK Integration with new API
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { prompt, tool } from "marrakech-sdk";
+import { prompt, tool } from "@marrakesh/core";
 import { z } from "zod";
 
 // Define your prompt with tools using new minimal API
