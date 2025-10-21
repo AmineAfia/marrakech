@@ -5,33 +5,31 @@ Test your prompts like you test code.
 ## Installation
 
 ```bash
-npm install -g marrakesh
-```
+# Global install
+npm install -g @marrakesh/cli
 
-Or use via npx:
-
-```bash
-npx marrakesh test
+# Or use via npx
+npx @marrakesh/cli test
 ```
 
 ## Commands
 
-### `marrakesh test [pattern]`
+### `@marrakesh/cli test [pattern]`
 
 Run tests matching the glob pattern.
 
 ```bash
 # Test all files
-npx marrakesh test
+npx @marrakesh/cli test
 
 # Test specific directory
-npx marrakesh test "src/prompts/**/*.ts"
+npx @marrakesh/cli test "src/prompts/**/*.ts"
 
 # Watch mode
-npx marrakesh test --watch
+npx @marrakesh/cli test --watch
 
 # Stop on first failure
-npx marrakesh test --bail
+npx @marrakesh/cli test --bail
 
 ```
 
@@ -60,7 +58,7 @@ export const weatherAgent = prompt('You are a weather assistant')
 ### 2. Run Tests
 
 ```bash
-npx marrakesh test
+npx @marrakesh/cli test
 ```
 
 Output:
@@ -80,7 +78,7 @@ Output:
 ### 3. Watch Mode
 
 ```bash
-npx marrakesh test --watch
+npx @marrakesh/cli test --watch
 ```
 
 Press `a` to run all tests, `Ctrl+C` to exit.
@@ -107,7 +105,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: npm install
-      - run: npx marrakesh test
+      - run: npx @marrakesh/cli test
         env:
           MARRAKESH_API_KEY: ${{ secrets.MARRAKESH_API_KEY }}
 ```

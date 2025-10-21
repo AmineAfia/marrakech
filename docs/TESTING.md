@@ -22,13 +22,13 @@ const weatherAgent = prompt('You are a weather assistant')
 
 ```bash
 # Run tests once
-npx marrakesh test
+npx @marrakesh/cli test
 
 # Watch mode - reruns on changes
-npx marrakesh test --watch
+npx @marrakesh/cli test --watch
 
 # Stop on first failure
-npx marrakesh test --bail
+npx @marrakesh/cli test --bail
 ```
 
 ### 3. View Results
@@ -147,19 +147,19 @@ const customExecutor: Executor = async (prompt, input, config) => {
 
 ## CLI Commands
 
-### `marrakesh test [pattern]`
+### `@marrakesh/cli test [pattern]`
 
 Run tests matching the glob pattern.
 
 ```bash
 # Test all files
-npx marrakesh test
+npx @marrakesh/cli test
 
 # Test specific directory
-npx marrakesh test "src/prompts/**/*.ts"
+npx @marrakesh/cli test "src/prompts/**/*.ts"
 
 # Test with options
-npx marrakesh test --watch
+npx @marrakesh/cli test --watch
 ```
 
 **Options:**
@@ -273,7 +273,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: npm install
-      - run: npx marrakesh test
+      - run: npx @marrakesh/cli test
         env:
           MARRAKESH_API_KEY: ${{ secrets.MARRAKESH_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -283,7 +283,7 @@ jobs:
 
 ```bash
 # Run tests in watch mode while developing
-npx marrakesh test --watch
+npx @marrakesh/cli test --watch
 
 # Press 'a' to run all tests
 # Press Ctrl+C to exit
