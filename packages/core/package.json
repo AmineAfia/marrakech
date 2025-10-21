@@ -1,6 +1,6 @@
 {
 "name": "@marrakesh/core",
-"version": "0.1.0-alpha.1",
+"version": "0.1.0-alpha.2",
 "description": "Minimal, type-safe tool integration for LLMs",
   "type": "module",
   "main": "./dist/index.cjs",
