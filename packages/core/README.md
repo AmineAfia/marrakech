@@ -13,7 +13,14 @@ A structured, testable, and data-driven context engineering SDK for the TypeScri
 ## Installation
 
 ```bash
+# Using npm
 npm install @marrakesh/core zod
+
+# Using pnpm
+pnpm add @marrakesh/core zod
+
+# Using yarn
+yarn add @marrakesh/core zod
 ```
 
 ## Quick Start

@@ -5,7 +5,14 @@ Type-safe tool integration for LLMs.
 ## Installation
 
 ```bash
+# Using npm
 npm install @marrakesh/core zod
+
+# Using pnpm
+pnpm add @marrakesh/core zod
+
+# Using yarn
+yarn add @marrakesh/core zod
 ```
 
 ## Quick Start
@@ -295,13 +302,13 @@ console.log(`${results.passed}/${results.total} tests passed`)
 
 ```bash
 # Run tests
-npx marrakesh test
+npx @marrakesh/cli test
 
 # Watch mode - reruns on file changes
-npx marrakesh test --watch
+npx @marrakesh/cli test --watch
 
 # Stop on first failure
-npx marrakesh test --bail
+npx @marrakesh/cli test --bail
 ```
 
 ### Features
