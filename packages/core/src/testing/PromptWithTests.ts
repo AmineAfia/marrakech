@@ -60,7 +60,7 @@ export class PromptWithTests {
 
     // Generate IDs for analytics
     const testRunId = generateTestRunId();
-    const toolNames = this.prompt.tools.map(
+    const toolNames = this.prompt.toolsList.map(
       (t) => (t as { name?: string }).name || "unnamed",
     );
     const promptId = generatePromptId(this.prompt.systemPrompt, toolNames);

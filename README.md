@@ -193,6 +193,15 @@ Add tools with Zod schemas.
 p.tool(getWeather, getLocation);
 ```
 
+### `.tools(tools: ToolFunction[])`
+
+Add multiple tools from an array.
+
+```typescript
+const myTools = [getWeather, getLocation];
+p.tools(myTools);
+```
+
 ### `.output(schema: z.ZodType)`
 
 Set structured JSON output.

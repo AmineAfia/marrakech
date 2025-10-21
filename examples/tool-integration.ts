@@ -48,6 +48,10 @@ const p = prompt(
   .system("If you cannot help with a request, create a support ticket")
   .tool(getUserDetails, createSupportTicket, checkOrderStatus);
 
+// Alternative: pass tools as an array
+const allTools = [getUserDetails, createSupportTicket, checkOrderStatus];
+const p2 = prompt("You are a helpful customer service agent").tools(allTools);
+
 // Convert to different formats
 console.log("=== OpenAI Format ===");
 const openaiResult = p.toOpenAI();

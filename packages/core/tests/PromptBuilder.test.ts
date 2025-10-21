@@ -102,9 +102,120 @@ describe("PromptBuilder", () => {
     
     // Verify both tools have the correct descriptions
     const toolValues = Object.values(result.tools || {});
-    const descriptions = toolValues.map((tool: any) => tool.description);
+    const descriptions = toolValues.map(
+      (tool: { description: string }) => tool.description,
+    );
     expect(descriptions).toContain("Tool 1");
     expect(descriptions).toContain("Tool 2");
+  });
+
+  it("should add tools from an array using tools() method", () => {
+    const tool1 = tool({
+      description: "Array Tool 1",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const tool2 = tool({
+      description: "Array Tool 2",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const toolArray = [tool1, tool2];
+    const p = prompt("You are helpful").tools(toolArray);
+
+    const result = p.toVercelAI();
+
+    expect(Object.keys(result.tools || {})).toHaveLength(2);
+    
+    // Verify both tools have the correct descriptions
+    const toolValues = Object.values(result.tools || {});
+    const descriptions = toolValues.map(
+      (tool: { description: string }) => tool.description,
+    );
+    expect(descriptions).toContain("Array Tool 1");
+    expect(descriptions).toContain("Array Tool 2");
+  });
+
+  it("should handle empty array in tools() method", () => {
+    const p = prompt("You are helpful").tools([]);
+
+    const result = p.toVercelAI();
+
+    expect(result.tools).toBeUndefined();
+  });
+
+  it("should work with chaining tool() and tools() methods", () => {
+    const tool1 = tool({
+      description: "Individual Tool",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const tool2 = tool({
+      description: "Array Tool 1",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const tool3 = tool({
+      description: "Array Tool 2",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const p = prompt("You are helpful").tool(tool1).tools([tool2, tool3]);
+
+    const result = p.toVercelAI();
+
+    expect(Object.keys(result.tools || {})).toHaveLength(3);
+    
+    // Verify all tools have the correct descriptions
+    const toolValues = Object.values(result.tools || {});
+    const descriptions = toolValues.map(
+      (tool: { description: string }) => tool.description,
+    );
+    expect(descriptions).toContain("Individual Tool");
+    expect(descriptions).toContain("Array Tool 1");
+    expect(descriptions).toContain("Array Tool 2");
+  });
+
+  it("should format tools correctly in toOpenAI() output", () => {
+    const tool1 = tool({
+      description: "OpenAI Tool 1",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const tool2 = tool({
+      description: "OpenAI Tool 2",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const p = prompt("You are helpful").tools([tool1, tool2]);
+
+    const result = p.toOpenAI();
+
+    expect(result.tools).toBeDefined();
+    expect(result.tools).toHaveLength(2);
+    expect(result.tools?.[0].description).toBe("OpenAI Tool 1");
+    expect(result.tools?.[1].description).toBe("OpenAI Tool 2");
+  });
+
+  it("should format tools correctly in toAnthropic() output", () => {
+    const tool1 = tool({
+      description: "Anthropic Tool 1",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const tool2 = tool({
+      description: "Anthropic Tool 2",
+      parameters: z.object({ param: z.string() }),
+    });
+
+    const p = prompt("You are helpful").tools([tool1, tool2]);
+
+    const result = p.toAnthropic();
+
+    expect(result.tools).toBeDefined();
+    expect(result.tools).toHaveLength(2);
+    expect(result.tools?.[0].description).toBe("Anthropic Tool 1");
+    expect(result.tools?.[1].description).toBe("Anthropic Tool 2");
   });
 
   describe("ModelMessage Support", () => {

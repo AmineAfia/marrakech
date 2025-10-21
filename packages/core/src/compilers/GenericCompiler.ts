@@ -14,7 +14,7 @@ export function toGeneric(promptBuilder: PromptBuilder): string {
   }
 
   // Add tools
-  const tools = promptBuilder.tools;
+  const tools = promptBuilder.toolsList;
   if (tools.length > 0) {
     parts.push("\nTools:");
     for (const tool of tools) {
