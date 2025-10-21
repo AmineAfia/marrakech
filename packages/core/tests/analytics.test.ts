@@ -100,6 +100,7 @@ describe('Analytics Utils', () => {
 describe('AnalyticsClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockClear();
     process.env = { ...originalEnv };
     // Reset singleton
     (AnalyticsClient as any).instance = null;
@@ -147,7 +148,7 @@ describe('AnalyticsClient', () => {
       });
 
       // Should not throw (fire-and-forget)
-      expect(() => client.flush()).not.toThrow();
+      expect(() => client.waitForPendingRequests()).not.toThrow();
     });
 
     it("should be disabled when MARRAKESH_ANALYTICS_DISABLED is true", () => {
@@ -172,73 +173,88 @@ describe('AnalyticsClient', () => {
     });
   });
 
-  describe('batching', () => {
+  describe("event tracking", () => {
     beforeEach(() => {
       process.env.MARRAKESH_API_KEY = "test-key";
     });
 
-    it('should batch multiple events', async () => {
+    it("should send multiple events separately", async () => {
+      mockFetch.mockResolvedValue(new Response("OK", { status: 200 }));
       const client = AnalyticsClient.getInstance();
-      
+
       client.trackPromptMetadata({
-        prompt_id: 'test1',
-        name: 'test1',
-        description: 'test1',
-        prompt_text: 'test1',
-        version: '1.0',
+        prompt_id: "test1",
+        name: "test1",
+        description: "test1",
+        prompt_text: "test1",
+        version: "1.0",
         is_active: 1,
-        account_id: '',
-        organization_id: '',
+        account_id: "",
+        organization_id: "",
         updated_at: new Date().toISOString(),
       });
 
       client.trackPromptExecution({
-        execution_id: 'exec1',
-        prompt_id: 'test1',
-        session_id: 'session1',
-        prompt_name: 'test1',
-        prompt_version: '1.0',
+        execution_id: "exec1",
+        prompt_id: "test1",
+        session_id: "session1",
+        prompt_name: "test1",
+        prompt_version: "1.0",
         execution_time_ms: 100,
-        model: 'gpt-4',
-        region: 'us-east-1',
+        model: "gpt-4",
+        region: "us-east-1",
         request_tokens: 100,
         response_tokens: 50,
         cost_usd: 0.01,
-        status: 'success',
-        account_id: '',
-        organization_id: '',
+        status: "success",
+        account_id: "",
+        organization_id: "",
       });
 
       client.trackToolCall({
-        tool_call_id: 'tool1',
-        execution_id: 'exec1',
-        prompt_id: 'test1',
-        tool_name: 'test-tool',
+        tool_call_id: "tool1",
+        execution_id: "exec1",
+        prompt_id: "test1",
+        tool_name: "test-tool",
         execution_time_ms: 50,
         input_tokens: 10,
         output_tokens: 5,
         cost_usd: 0.001,
-        status: 'success',
+        status: "success",
       });
 
-      client.flush();
+      await client.waitForPendingRequests();
 
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Should be 3 separate calls, not 1 batched call
+      expect(mockFetch).toHaveBeenCalledTimes(3);
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      const call = mockFetch.mock.calls[0];
-      expect(call[0]).toBe("https://www.marrakesh.dev/api/ingest");
-      expect(call[1].method).toBe('POST');
-      expect(call[1].headers['x-api-key']).toBe('test-key');
-      
-      const body = JSON.parse(call[1].body);
-      expect(body.prompt_metadata).toHaveLength(1);
-      expect(body.prompt_executions).toHaveLength(1);
-      expect(body.tool_calls).toHaveLength(1);
+      // Check that each call has the right structure
+      const calls = mockFetch.mock.calls;
+      expect(calls[0][0]).toBe("https://www.marrakesh.dev/api/ingest");
+      expect(calls[1][0]).toBe("https://www.marrakesh.dev/api/ingest");
+      expect(calls[2][0]).toBe("https://www.marrakesh.dev/api/ingest");
+
+      // Check the first call (prompt metadata)
+      const firstCallBody = JSON.parse(calls[0][1].body);
+      expect(firstCallBody.prompt_metadata).toHaveLength(1);
+      expect(firstCallBody.prompt_executions).toHaveLength(0);
+      expect(firstCallBody.tool_calls).toHaveLength(0);
+
+      // Check the second call (prompt execution)
+      const secondCallBody = JSON.parse(calls[1][1].body);
+      expect(secondCallBody.prompt_metadata).toHaveLength(0);
+      expect(secondCallBody.prompt_executions).toHaveLength(1);
+      expect(secondCallBody.tool_calls).toHaveLength(0);
+
+      // Check the third call (tool call)
+      const thirdCallBody = JSON.parse(calls[2][1].body);
+      expect(thirdCallBody.prompt_metadata).toHaveLength(0);
+      expect(thirdCallBody.prompt_executions).toHaveLength(0);
+      expect(thirdCallBody.tool_calls).toHaveLength(1);
     });
 
-    it('should use custom endpoint when provided', () => {
+    it("should use custom endpoint when provided", async () => {
+      mockFetch.mockResolvedValue(new Response("OK", { status: 200 }));
       // Set the environment variable before creating the client
       process.env.MARRAKESH_ANALYTICS_ENDPOINT =
         "https://custom.example.com/api/ingest";
@@ -260,7 +276,7 @@ describe('AnalyticsClient', () => {
         updated_at: new Date().toISOString(),
       });
 
-      client.flush();
+      await client.waitForPendingRequests();
 
       expect(mockFetch).toHaveBeenCalledWith(
         "https://custom.example.com/api/ingest",
@@ -278,43 +294,42 @@ describe('AnalyticsClient', () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
       const client = AnalyticsClient.getInstance();
       
-      expect(() => {
-        client.trackPromptMetadata({
-          prompt_id: 'test',
-          name: 'test',
-          description: 'test',
-          prompt_text: 'test',
-          version: '1.0',
-          is_active: 1,
-          account_id: '',
-          organization_id: '',
-          updated_at: new Date().toISOString(),
-        });
-        client.flush();
-      }).not.toThrow();
+      // Should not throw (fire-and-forget)
+      client.trackPromptMetadata({
+        prompt_id: "test",
+        name: "test",
+        description: "test",
+        prompt_text: "test",
+        version: "1.0",
+        is_active: 1,
+        account_id: "",
+        organization_id: "",
+        updated_at: new Date().toISOString(),
+      });
+      
+      await expect(client.waitForPendingRequests()).resolves.not.toThrow();
     });
 
-    it('should not throw on JSON serialization errors', () => {
+    it("should not throw on JSON serialization errors", async () => {
       const client = AnalyticsClient.getInstance();
-      
+
       // Create circular reference to cause JSON error
-      const circular: any = { test: 'value' };
+      const circular: any = { test: "value" };
       circular.self = circular;
-      
-      expect(() => {
-        client.trackPromptMetadata({
-          prompt_id: 'test',
-          name: 'test',
-          description: 'test',
-          prompt_text: 'test',
-          version: '1.0',
-          is_active: 1,
-          account_id: '',
-          organization_id: '',
-          updated_at: new Date().toISOString(),
-        });
-        client.flush();
-      }).not.toThrow();
+
+      client.trackPromptMetadata({
+        prompt_id: "test",
+        name: "test",
+        description: "test",
+        prompt_text: "test",
+        version: "1.0",
+        is_active: 1,
+        account_id: "",
+        organization_id: "",
+        updated_at: new Date().toISOString(),
+      });
+
+      await expect(client.waitForPendingRequests()).resolves.not.toThrow();
     });
   });
 
@@ -344,16 +359,13 @@ describe('AnalyticsClient', () => {
         organization_id: '',
         updated_at: new Date().toISOString(),
       });
-      client.flush();
-
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await client.waitForPendingRequests();
 
       expect(console.error).toHaveBeenCalled();
       expect(console.error).toHaveBeenCalledWith(
-        "[Marrakesh Analytics] Network error sending batch",
+        "[Marrakesh Analytics] Analytics request failed",
         expect.objectContaining({
-          context: "[Marrakesh Analytics] Network error sending batch",
+          context: "[Marrakesh Analytics] Analytics request failed",
           error: "Network error",
         }),
       );
