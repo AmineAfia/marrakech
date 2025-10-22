@@ -1,4 +1,5 @@
 import type { PromptBuilder } from "../PromptBuilder.js";
+import { lintPrompt } from "../linter/index.js";
 import { extractToolMetadata } from "../tools/tool.js";
 import { zodToJsonSchema } from "../schema/zodToJsonSchema.js";
 
@@ -39,5 +40,12 @@ export function toGeneric(promptBuilder: PromptBuilder): string {
     }
   }
 
-  return parts.join("\n");
+  const system = parts.join("\n");
+  // Lint generically using Anthropic-like structuring suggestions as a sensible default
+  try {
+    lintPrompt({ provider: "anthropic", system }, console);
+  } catch {
+    // Never throw from linter
+  }
+  return system;
 }

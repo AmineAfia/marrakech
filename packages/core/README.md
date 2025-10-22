@@ -7,7 +7,7 @@ A structured, testable, and data-driven context engineering SDK for the TypeScri
 - **Fluent API**: Chainable methods for building prompts
 - **AI SDK-style Tools**: Define tools with Zod schemas and metadata
 - **Provider Support**: Compile for OpenAI, Anthropic, or generic formats
-- **Built-in Linting**: Automatic validation and token counting
+- **Provider-Aware Prompt Linting (opt-in)**: Research-backed checks for OpenAI/Anthropic best practices (off by default)
 - **Vercel AI SDK Compatible**: Seamless integration with existing workflows
 
 ## Installation
@@ -127,6 +127,59 @@ const myTool = tool({
 - `'generic'` - Simple markdown format (default)
 - `'openai'` - OpenAI-optimized with separate tools array
 - `'anthropic'` - Claude-optimized with XML structure
+
+## Prompt Linter (opt-in)
+
+The SDK includes a lightweight, provider-aware prompt linter you can enable via environment variables. It never changes your request payload and only logs findings. It is disabled by default.
+
+### Enable
+
+```bash
+SDK_PROMPT_LINTER=1           # enable (default off)
+SDK_PROMPT_LINTER_MODE=warn   # info|warn|error threshold (default: warn)
+SDK_PROMPT_LINTER_PROVIDER=auto # auto|openai|anthropic (default: auto)
+SDK_PROMPT_LINTER_RULES='{"core/asks-for-chain-of-thought":"error"}' # per-rule overrides
+```
+
+Findings are logged as single-line messages:
+
+```
+core/missing-output-spec (warn): Extraction implied but no output contract found. Add JSON or field list.
+```
+
+### What it checks
+
+- Core
+  - Missing action verb at the start (warn)
+  - Extraction implied but no output contract (warn)
+  - Long content lacks fences/delimiters (warn)
+  - Obvious contradictory instructions (warn)
+  - Requests chain-of-thought (warn)
+  - RAG context but missing guardrails (info)
+  - Unescaped placeholders like `{var}` (info)
+  - Overlong system prompts (info)
+- OpenAI
+  - Recommend Structured Outputs when asking for JSON (info)
+  - Durable policy belongs in system message (info)
+  - Overuse of negative instructions (info)
+- Anthropic
+  - Recommend simple XML tags for multi-part tasks (info)
+  - Avoid requesting detailed chain-of-thought (warn)
+  - Put durable policy in system message (info)
+  - Fence few-shot examples (info)
+
+### Behavior and guarantees
+
+- Default-off; zero behavior change unless enabled
+- Purely local; no network calls; never throws
+- Non-blocking: logs to console; use MODE to filter
+- Fine-grained overrides via `SDK_PROMPT_LINTER_RULES`
+
+### Rationale and sources
+
+- OpenAI: prompt engineering best practices and structured outputs guidance
+- Anthropic: prompting docs and XML structuring guidance
+
 
 ## Examples
 
