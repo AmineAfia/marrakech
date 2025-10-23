@@ -39,6 +39,10 @@ export type {
   ExecutorMetadata,
 } from "./testing/types.js";
 
+// Internal testing utilities - NOT part of public API
+// Only use these in internal unit tests, not in production code
+export { runWithMockExecutor, createMockExecutorConfig } from './testing/testHelpers.js';
+
 // Executor utilities
 export {
   createVercelAIExecutor,
