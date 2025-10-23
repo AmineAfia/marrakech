@@ -2,7 +2,7 @@
  * Testing types for eval-driven development
  */
 
-import type { Executor, ExecutionStep } from "../executors/types.js";
+import type { ExecutionStep, ExecutorConfig } from "../executors/types.js";
 
 /**
  * A single test case for prompt evaluation
@@ -31,6 +31,16 @@ export interface EvalOptions {
 }
 
 /**
+ * Metadata about the executor used for a test
+ */
+export interface ExecutorMetadata {
+  /** Model name/identifier */
+  model: string;
+  /** Full executor configuration */
+  config: ExecutorConfig;
+}
+
+/**
  * Result of a single evaluation
  */
 export interface EvalResult {
@@ -50,6 +60,8 @@ export interface EvalResult {
   expected?: unknown;
   /** Execution steps including tool calls */
   steps?: ExecutionStep[];
+  /** Executor metadata (model and config) */
+  executor?: ExecutorMetadata;
 }
 
 /**
@@ -66,6 +78,15 @@ export interface TestResults {
   duration: number;
   /** Individual test results */
   results: EvalResult[];
+  /** Results grouped by executor */
+  executorResults?: Record<
+    string,
+    {
+      passed: number;
+      failed: number;
+      results: EvalResult[];
+    }
+  >;
 }
 
 /**
@@ -74,8 +95,8 @@ export interface TestResults {
 export interface TestRunOptions {
   /** Stop on first failure */
   bail?: boolean;
-  /** Executor to use for running tests */
-  executor?: Executor;
+  /** Executor configs to use for running tests (overrides default executors) */
+  executors?: ExecutorConfig[];
   /** Callback when a test starts */
   onTestStart?: (testCase: TestCase) => void;
   /** Callback when a test completes */
