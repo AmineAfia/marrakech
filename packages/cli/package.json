@@ -1,8 +1,8 @@
 {
-"name": "@marrakesh/cli",
-"version": "0.1.0-alpha.2",
-"description": "CLI for testing Marrakesh prompts",
-"license": "Apache-2.0",
+  "name": "@marrakesh/cli",
+  "version": "0.1.0-alpha.2",
+  "description": "CLI for testing Marrakesh prompts",
+  "license": "Apache-2.0",
   "type": "module",
   "bin": {
     "marrakesh": "./dist/index.js"
@@ -15,10 +15,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -41,4 +38,3 @@
     "@types/node": "^20.0.0"
   }
 }
-

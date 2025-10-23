@@ -33,4 +33,3 @@ program
 program.addCommand(testCommand);
 
 program.parse();
-

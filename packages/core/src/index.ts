@@ -41,7 +41,10 @@ export type {
 
 // Internal testing utilities - NOT part of public API
 // Only use these in internal unit tests, not in production code
-export { runWithMockExecutor, createMockExecutorConfig } from './testing/testHelpers.js';
+export {
+  runWithMockExecutor,
+  createMockExecutorConfig,
+} from "./testing/testHelpers.js";
 
 // Executor utilities
 export {

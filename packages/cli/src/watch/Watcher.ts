@@ -23,9 +23,7 @@ export class Watcher {
   /**
    * Start watching files and running tests
    */
-  async start(
-    onResults: (results: RunnerResults) => void,
-  ): Promise<void> {
+  async start(onResults: (results: RunnerResults) => void): Promise<void> {
     // Initial run
     await this.runTests(onResults);
 
@@ -52,7 +50,9 @@ export class Watcher {
     // Handle keyboard input
     this.setupKeyboardHandlers(onResults);
 
-    console.log("\n👁️  Watching for changes... (Press Ctrl+C to exit, 'a' to run all tests)\n");
+    console.log(
+      "\n👁️  Watching for changes... (Press Ctrl+C to exit, 'a' to run all tests)\n",
+    );
 
     // Keep process alive
     return new Promise(() => {
@@ -133,4 +133,3 @@ export class Watcher {
     }
   }
 }
-

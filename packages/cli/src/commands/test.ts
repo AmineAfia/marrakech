@@ -90,4 +90,3 @@ export const testCommand = new Command("test")
       process.exit(1);
     }
   });
-

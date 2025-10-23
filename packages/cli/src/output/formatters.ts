@@ -58,4 +58,3 @@ export function formatError(error: Error): string {
 
   return output;
 }
-

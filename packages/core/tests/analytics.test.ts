@@ -2,17 +2,17 @@
  * Analytics functionality tests
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { AnalyticsClient } from '../src/analytics/AnalyticsClient.js';
-import { 
-  generatePromptId, 
-  generateExecutionId, 
-  generateSessionId, 
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { AnalyticsClient } from "../src/analytics/AnalyticsClient.js";
+import {
+  generatePromptId,
+  generateExecutionId,
+  generateSessionId,
   generateToolCallId,
   estimateTokens,
   estimateCost,
-  getCurrentTimestamp
-} from '../src/analytics/utils.js';
+  getCurrentTimestamp,
+} from "../src/analytics/utils.js";
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -21,83 +21,91 @@ global.fetch = mockFetch;
 // Mock process.env
 const originalEnv = process.env;
 
-describe('Analytics Utils', () => {
-  describe('generatePromptId', () => {
-    it('should generate deterministic IDs for same content', () => {
-      const id1 = generatePromptId('Hello world', ['tool1', 'tool2']);
-      const id2 = generatePromptId('Hello world', ['tool1', 'tool2']);
+describe("Analytics Utils", () => {
+  describe("generatePromptId", () => {
+    it("should generate deterministic IDs for same content", () => {
+      const id1 = generatePromptId("Hello world", ["tool1", "tool2"]);
+      const id2 = generatePromptId("Hello world", ["tool1", "tool2"]);
       expect(id1).toBe(id2);
       expect(id1).toMatch(/^[a-f0-9]+$/); // Hex string
     });
 
-    it('should generate different IDs for different content', () => {
-      const id1 = generatePromptId('Hello world', ['tool1']);
-      const id2 = generatePromptId('Hello world', ['tool2']);
+    it("should generate different IDs for different content", () => {
+      const id1 = generatePromptId("Hello world", ["tool1"]);
+      const id2 = generatePromptId("Hello world", ["tool2"]);
       expect(id1).not.toBe(id2);
     });
 
-    it('should handle empty tool names', () => {
-      const id = generatePromptId('Hello world', []);
+    it("should handle empty tool names", () => {
+      const id = generatePromptId("Hello world", []);
       expect(id).toMatch(/^[a-f0-9]+$/);
     });
   });
 
-  describe('generateExecutionId', () => {
-    it('should generate unique IDs', () => {
+  describe("generateExecutionId", () => {
+    it("should generate unique IDs", () => {
       const id1 = generateExecutionId();
       const id2 = generateExecutionId();
       expect(id1).not.toBe(id2);
-      expect(id1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i); // UUID v4
+      expect(id1).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      ); // UUID v4
     });
   });
 
-  describe('generateSessionId', () => {
-    it('should generate unique session IDs', () => {
+  describe("generateSessionId", () => {
+    it("should generate unique session IDs", () => {
       const id1 = generateSessionId();
       const id2 = generateSessionId();
       expect(id1).not.toBe(id2);
-      expect(id1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expect(id1).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
     });
   });
 
-  describe('generateToolCallId', () => {
-    it('should generate unique tool call IDs', () => {
+  describe("generateToolCallId", () => {
+    it("should generate unique tool call IDs", () => {
       const id1 = generateToolCallId();
       const id2 = generateToolCallId();
       expect(id1).not.toBe(id2);
-      expect(id1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expect(id1).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
     });
   });
 
-  describe('estimateTokens', () => {
-    it('should estimate tokens correctly', () => {
-      expect(estimateTokens('Hello')).toBe(2); // 5 chars / 4 = 1.25, rounded up to 2
-      expect(estimateTokens('Hello world')).toBe(3); // 11 chars / 4 = 2.75, rounded up to 3
-      expect(estimateTokens('')).toBe(0);
+  describe("estimateTokens", () => {
+    it("should estimate tokens correctly", () => {
+      expect(estimateTokens("Hello")).toBe(2); // 5 chars / 4 = 1.25, rounded up to 2
+      expect(estimateTokens("Hello world")).toBe(3); // 11 chars / 4 = 2.75, rounded up to 3
+      expect(estimateTokens("")).toBe(0);
     });
   });
 
-  describe('estimateCost', () => {
-    it('should estimate costs for known models', () => {
-      const cost = estimateCost('gpt-4', 1000, 500);
+  describe("estimateCost", () => {
+    it("should estimate costs for known models", () => {
+      const cost = estimateCost("gpt-4", 1000, 500);
       expect(cost).toBeGreaterThan(0);
     });
 
-    it('should handle unknown models', () => {
-      const cost = estimateCost('unknown-model', 1000, 500);
+    it("should handle unknown models", () => {
+      const cost = estimateCost("unknown-model", 1000, 500);
       expect(cost).toBeGreaterThan(0);
     });
   });
 
-  describe('getCurrentTimestamp', () => {
-    it('should return ISO timestamp', () => {
+  describe("getCurrentTimestamp", () => {
+    it("should return ISO timestamp", () => {
       const timestamp = getCurrentTimestamp();
-      expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      expect(timestamp).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+      );
     });
   });
 });
 
-describe('AnalyticsClient', () => {
+describe("AnalyticsClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockClear();
@@ -110,40 +118,40 @@ describe('AnalyticsClient', () => {
     process.env = originalEnv;
   });
 
-  describe('initialization', () => {
-    it('should not track when API key is missing', () => {
+  describe("initialization", () => {
+    it("should not track when API key is missing", () => {
       process.env.MARRAKESH_API_KEY = undefined;
       const client = AnalyticsClient.getInstance();
-      
+
       // Should not throw and should be no-op
       expect(() => {
         client.trackPromptMetadata({
-          prompt_id: 'test',
-          name: 'test',
-          description: 'test',
-          prompt_text: 'test',
-          version: '1.0',
+          prompt_id: "test",
+          name: "test",
+          description: "test",
+          prompt_text: "test",
+          version: "1.0",
           is_active: 1,
-          account_id: '',
-          organization_id: '',
+          account_id: "",
+          organization_id: "",
           updated_at: new Date().toISOString(),
         });
       }).not.toThrow();
     });
 
-    it('should track when API key is present', () => {
+    it("should track when API key is present", () => {
       process.env.MARRAKESH_API_KEY = "test-key";
       const client = AnalyticsClient.getInstance();
-      
+
       client.trackPromptMetadata({
-        prompt_id: 'test',
-        name: 'test',
-        description: 'test',
-        prompt_text: 'test',
-        version: '1.0',
+        prompt_id: "test",
+        name: "test",
+        description: "test",
+        prompt_text: "test",
+        version: "1.0",
         is_active: 1,
-        account_id: '',
-        organization_id: '',
+        account_id: "",
+        organization_id: "",
         updated_at: new Date().toISOString(),
       });
 
@@ -285,15 +293,15 @@ describe('AnalyticsClient', () => {
     });
   });
 
-  describe('error handling', () => {
+  describe("error handling", () => {
     beforeEach(() => {
       process.env.MARRAKESH_API_KEY = "test-key";
     });
 
-    it('should not throw on network errors', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
+    it("should not throw on network errors", async () => {
+      mockFetch.mockRejectedValue(new Error("Network error"));
       const client = AnalyticsClient.getInstance();
-      
+
       // Should not throw (fire-and-forget)
       client.trackPromptMetadata({
         prompt_id: "test",
@@ -306,7 +314,7 @@ describe('AnalyticsClient', () => {
         organization_id: "",
         updated_at: new Date().toISOString(),
       });
-      
+
       await expect(client.waitForPendingRequests()).resolves.not.toThrow();
     });
 
@@ -333,7 +341,7 @@ describe('AnalyticsClient', () => {
     });
   });
 
-  describe('debug mode', () => {
+  describe("debug mode", () => {
     beforeEach(() => {
       process.env.MARRAKESH_API_KEY = "test-key";
       process.env.MARRAKESH_DEBUG = "true";
@@ -344,19 +352,19 @@ describe('AnalyticsClient', () => {
       vi.restoreAllMocks();
     });
 
-    it('should log errors in debug mode', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
+    it("should log errors in debug mode", async () => {
+      mockFetch.mockRejectedValue(new Error("Network error"));
       const client = AnalyticsClient.getInstance();
-      
+
       client.trackPromptMetadata({
-        prompt_id: 'test',
-        name: 'test',
-        description: 'test',
-        prompt_text: 'test',
-        version: '1.0',
+        prompt_id: "test",
+        name: "test",
+        description: "test",
+        prompt_text: "test",
+        version: "1.0",
         is_active: 1,
-        account_id: '',
-        organization_id: '',
+        account_id: "",
+        organization_id: "",
         updated_at: new Date().toISOString(),
       });
       await client.waitForPendingRequests();

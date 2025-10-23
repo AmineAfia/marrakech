@@ -134,4 +134,3 @@ export interface TestRunMetadata {
   /** Git commit hash if available */
   git_commit?: string;
 }
-

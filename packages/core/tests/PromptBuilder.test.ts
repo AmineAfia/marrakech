@@ -94,12 +94,12 @@ describe("PromptBuilder", () => {
     const result = p.toVercelAI();
 
     expect(Object.keys(result.tools || {})).toHaveLength(2);
-    
+
     // Check that both tools are present (they should have unique names now)
     const toolKeys = Object.keys(result.tools || {});
     expect(toolKeys).toContain("unnamed");
     expect(toolKeys).toContain("unnamed_1");
-    
+
     // Verify both tools have the correct descriptions
     const toolValues = Object.values(result.tools || {});
     const descriptions = toolValues.map(
@@ -126,7 +126,7 @@ describe("PromptBuilder", () => {
     const result = p.toVercelAI();
 
     expect(Object.keys(result.tools || {})).toHaveLength(2);
-    
+
     // Verify both tools have the correct descriptions
     const toolValues = Object.values(result.tools || {});
     const descriptions = toolValues.map(
@@ -165,7 +165,7 @@ describe("PromptBuilder", () => {
     const result = p.toVercelAI();
 
     expect(Object.keys(result.tools || {})).toHaveLength(3);
-    
+
     // Verify all tools have the correct descriptions
     const toolValues = Object.values(result.tools || {});
     const descriptions = toolValues.map(

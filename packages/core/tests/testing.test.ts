@@ -26,7 +26,9 @@ describe("Matchers", () => {
 
     it("should match identical objects", () => {
       expect(match({ a: 1, b: 2 }, { a: 1, b: 2 })).toBe(true);
-      expect(match({ nested: { value: "test" } }, { nested: { value: "test" } })).toBe(true);
+      expect(
+        match({ nested: { value: "test" } }, { nested: { value: "test" } }),
+      ).toBe(true);
     });
 
     it("should not match different objects", () => {
@@ -254,7 +256,6 @@ describe("PromptWithTests.run()", () => {
     expect(results.duration).toBeGreaterThan(40);
     expect(results.results[0].duration).toBeGreaterThan(40);
   });
-
 });
 
 describe("PromptBuilder.eval()", () => {
@@ -332,4 +333,3 @@ describe("Integration with PromptBuilder", () => {
     expect(p.getPrompt().outputFormat).toBeDefined();
   });
 });
-

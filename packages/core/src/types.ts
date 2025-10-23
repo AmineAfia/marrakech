@@ -1,32 +1,32 @@
 import type { z } from "zod";
 
 // JSON value type for tool outputs
-export type JSONValue = 
-  | string 
-  | number 
-  | boolean 
-  | null 
-  | JSONValue[] 
+export type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONValue[]
   | { [key: string]: JSONValue };
 
 // AI SDK v5.0 compatible tool result output type
 export type LanguageModelV3ToolResultOutput =
-  | { type: 'text'; value: string }
-  | { type: 'json'; value: JSONValue }
-  | { type: 'error-text'; value: string }
-  | { type: 'error-json'; value: JSONValue }
+  | { type: "text"; value: string }
+  | { type: "json"; value: JSONValue }
+  | { type: "error-text"; value: string }
+  | { type: "error-json"; value: JSONValue }
   | {
-      type: 'content';
+      type: "content";
       value: Array<
         | {
-            type: 'text';
+            type: "text";
             /**
              * Text content.
              */
             text: string;
           }
         | {
-            type: 'media';
+            type: "media";
             /**
              * Base-64 encoded media data.
              */
