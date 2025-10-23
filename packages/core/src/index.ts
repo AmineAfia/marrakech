@@ -36,6 +36,7 @@ export type {
   TestResults,
   TestRunOptions,
   TestRunMetadata,
+  ExecutorMetadata,
 } from "./testing/types.js";
 
 // Executor utilities

@@ -2,7 +2,7 @@
  * Example: Testing prompts with Marrakesh SDK
  */
 
-import { prompt, tool, createVercelAIExecutor } from "@marrakesh/core";
+import { prompt, tool } from "@marrakesh/core";
 import { z } from "zod";
 import { openai } from "@ai-sdk/openai";
 
@@ -25,8 +25,8 @@ const getWeather = tool({
 // Create a weather agent with test cases
 export const weatherAgent = prompt("You are a helpful weather assistant")
   .tool(getWeather)
-  .test(
-    [
+  .test({
+    cases: [
       {
         input: "What's the weather in Paris?",
         expect: { city: "Paris" },
@@ -43,12 +43,13 @@ export const weatherAgent = prompt("You are a helpful weather assistant")
         name: "Should handle multi-word city names",
       },
     ],
-    // Provide default executor so tests can run
-    createVercelAIExecutor({
-      model: openai("gpt-4"),
-      maxSteps: 3,
-    }),
-  );
+    executors: [
+      {
+        model: openai("gpt-4"),
+        maxSteps: 3,
+      },
+    ],
+  });
 
 // Run tests directly if this file is executed
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -64,9 +65,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 // Example: Single evaluation
 export async function runSingleEval() {
   const result = await prompt("Translate to French").eval("Hello", {
-    executor: createVercelAIExecutor({
+    executor: {
       model: openai("gpt-4-turbo"),
-    }),
+    },
     expect: "Bonjour",
   });
 
@@ -85,14 +86,21 @@ export const emailWriter = prompt(
   "You are an email writing assistant. Extract email properties.",
 )
   .output(emailSchema)
-  .test([
-    {
-      input: "Write a professional email about a meeting",
-      expect: { tone: "formal" },
-    },
-    {
-      input: "Send a casual message to my friend",
-      expect: { tone: "casual" },
-    },
-  ]);
+  .test({
+    cases: [
+      {
+        input: "Write a professional email about a meeting",
+        expect: { tone: "formal" },
+      },
+      {
+        input: "Send a casual message to my friend",
+        expect: { tone: "casual" },
+      },
+    ],
+    executors: [
+      {
+        model: openai("gpt-4"),
+      },
+    ],
+  });
 

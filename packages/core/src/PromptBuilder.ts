@@ -14,8 +14,9 @@ import {
 } from "./analytics/utils.js";
 import { normalizeMessage } from "./utils/messageUtils.js";
 import type { TestCase, EvalOptions, EvalResult } from "./testing/types.js";
-import type { Executor } from "./executors/types.js";
+import type { ExecutorConfig } from "./executors/types.js";
 import { PromptWithTests } from "./testing/PromptWithTests.js";
+import { createVercelAIExecutor } from "./executors/index.js";
 
 export class PromptBuilder {
   public systemPrompt: string;
@@ -427,43 +428,57 @@ ${JSON.stringify(jsonSchema, null, 2)}
   }
 
   /**
-   * Define test cases for this prompt
-   * @param cases - Array of test cases
-   * @param executor - Optional default executor for running tests
+   * Define test cases for this prompt with executor configurations
+   * @param options - Test configuration object
+   * @param options.cases - Array of test cases
+   * @param options.executors - Array of executor configurations to run tests with
    * @returns PromptWithTests instance
    *
    * @example
    * ```typescript
+   * import { openai } from '@ai-sdk/openai'
+   *
    * const weatherAgent = prompt('You are a weather assistant')
    *   .tool(getWeather)
-   *   .test([
-   *     { input: 'Weather in Paris?', expect: { city: 'Paris' } },
-   *     { input: 'Is it raining in Tokyo?', expect: { city: 'Tokyo' } }
-   *   ])
+   *   .test({
+   *     cases: [
+   *       { input: 'Weather in Paris?', expect: { city: 'Paris' } },
+   *       { input: 'Is it raining in Tokyo?', expect: { city: 'Tokyo' } }
+   *     ],
+   *     executors: [
+   *       { model: openai('gpt-4') },
+   *       { model: openai('gpt-4o') }
+   *     ]
+   *   })
    * ```
    */
-  test(cases: TestCase[], executor?: Executor): PromptWithTests {
-    return new PromptWithTests(this, cases, executor);
+  test(options: {
+    cases: TestCase[];
+    executors: ExecutorConfig[];
+  }): PromptWithTests {
+    return new PromptWithTests(this, options.cases, options.executors);
   }
 
   /**
    * Run a single evaluation with this prompt
    * @param input - Input to test
-   * @param options - Evaluation options including executor and expected output
+   * @param options - Evaluation options including executor config and expected output
    * @returns Evaluation result
    *
    * @example
    * ```typescript
+   * import { openai } from '@ai-sdk/openai'
+   *
    * const result = await prompt('Translate to French')
    *   .eval('Hello', {
-   *     executor: createVercelAIExecutor({ model: openai('gpt-4') }),
+   *     executor: { model: openai('gpt-4') },
    *     expect: 'Bonjour'
    *   })
    * ```
    */
   async eval(
     input: string,
-    options: EvalOptions & { executor: Executor },
+    options: EvalOptions & { executor: ExecutorConfig },
   ): Promise<EvalResult> {
     const testCase: TestCase = {
       input,
@@ -474,9 +489,11 @@ ${JSON.stringify(jsonSchema, null, 2)}
     const promptWithTests = new PromptWithTests(
       this,
       [testCase],
-      options.executor,
+      [options.executor],
     );
-    return promptWithTests.runSingle(testCase, options.executor);
+
+    const executor = createVercelAIExecutor(options.executor);
+    return promptWithTests.runSingle(testCase, executor, options.executor);
   }
 }
 

@@ -8,8 +8,13 @@ import type {
   EvalResult,
   TestResults,
   TestRunOptions,
+  ExecutorMetadata,
 } from "./types.js";
-import type { Executor, ExecutionResult } from "../executors/types.js";
+import type {
+  Executor,
+  ExecutionResult,
+  ExecutorConfig,
+} from "../executors/types.js";
 import type { Message } from "../types.js";
 import { match } from "./matchers.js";
 import { generateExecutionId } from "../analytics/utils.js";
@@ -20,6 +25,28 @@ import {
   generateTestCaseId,
   getCurrentTimestamp,
 } from "../analytics/utils.js";
+import { createVercelAIExecutor } from "../executors/index.js";
+
+/**
+ * Extract model name from executor config for display
+ */
+function extractModelName(model: unknown): string {
+  if (!model) return "unknown";
+
+  // Check for modelId property (common in AI SDK models)
+  if (typeof model === "object" && model !== null && "modelId" in model) {
+    return String((model as { modelId: unknown }).modelId);
+  }
+
+  // Check for model property
+  if (typeof model === "object" && model !== null && "model" in model) {
+    return String((model as { model: unknown }).model);
+  }
+
+  // Fallback to string representation
+  const str = String(model);
+  return str.includes("[object") ? "unknown" : str;
+}
 
 /**
  * A prompt with test cases attached
@@ -29,34 +56,41 @@ export class PromptWithTests {
   constructor(
     private prompt: PromptBuilder,
     private testCases: TestCase[],
-    private defaultExecutor?: Executor,
+    private executorConfigs: ExecutorConfig[],
   ) {}
 
   /**
-   * Run all test cases with the provided executor
+   * Run all test cases with all executors
    *
-   * @param options - Test run options including executor
+   * @param options - Test run options
    * @returns Aggregated test results
    *
    * @example
    * ```typescript
-   * const results = await weatherAgent.run({
-   *   executor: createVercelAIExecutor({ model: openai('gpt-4') })
-   * })
+   * const results = await weatherAgent.run()
    * console.log(`${results.passed}/${results.total} tests passed`)
    * ```
    */
   async run(options?: TestRunOptions): Promise<TestResults> {
-    const executorOrUndefined = options?.executor ?? this.defaultExecutor;
-    if (!executorOrUndefined) {
+    // Use provided executors or fall back to constructor executors
+    const executorConfigsToUse = options?.executors ?? this.executorConfigs;
+
+    if (!executorConfigsToUse || executorConfigsToUse.length === 0) {
       throw new Error(
-        "No executor provided. Pass executor in run() options or in .test() constructor.",
+        "No executors provided. Pass executors in .test() or run() options.",
       );
     }
-    const executor: Executor = executorOrUndefined;
 
     const startTime = Date.now();
-    const results: EvalResult[] = [];
+    const allResults: EvalResult[] = [];
+    const executorResults: Record<
+      string,
+      {
+        passed: number;
+        failed: number;
+        results: EvalResult[];
+      }
+    > = {};
 
     // Generate IDs for analytics
     const testRunId = generateTestRunId();
@@ -65,7 +99,23 @@ export class PromptWithTests {
     );
     const promptId = generatePromptId(this.prompt.systemPrompt, toolNames);
 
-    // Run tests sequentially
+    // Create executor instances with metadata
+    const executors = executorConfigsToUse.map((config) => ({
+      config,
+      executor: createVercelAIExecutor(config),
+      name: extractModelName(config.model),
+      metadata: {
+        model: extractModelName(config.model),
+        config,
+      } as ExecutorMetadata,
+    }));
+
+    // Initialize executor results
+    for (const { name } of executors) {
+      executorResults[name] = { passed: 0, failed: 0, results: [] };
+    }
+
+    // Run tests sequentially, but run all executors in parallel for each test
     for (let index = 0; index < this.testCases.length; index++) {
       const testCase = this.testCases[index];
 
@@ -80,31 +130,52 @@ export class PromptWithTests {
       });
 
       options?.onTestStart?.(testCase);
-      const result = await this.runSingle(testCase, executor);
-      options?.onTestComplete?.(result);
 
-      // Fire test-complete progress event
-      options?.onProgress?.({
-        type: "test-complete",
-        data: result,
-      });
+      // Run all executors in parallel for this test case
+      const executorResultsForTest = await Promise.all(
+        executors.map(({ executor, config, metadata }) =>
+          this.runSingle(testCase, executor, config, metadata),
+        ),
+      );
 
-      results.push(result);
+      // Process results from all executors
+      for (let i = 0; i < executorResultsForTest.length; i++) {
+        const result = executorResultsForTest[i];
+        const executorName = executors[i].name;
 
-      // Track individual test case (fire-and-forget, non-blocking)
-      this.trackTestCaseResult(result, testRunId, promptId);
+        allResults.push(result);
+        executorResults[executorName].results.push(result);
 
-      if (options?.bail && !result.passed) {
+        if (result.passed) {
+          executorResults[executorName].passed++;
+        } else {
+          executorResults[executorName].failed++;
+        }
+
+        options?.onTestComplete?.(result);
+
+        // Fire test-complete progress event
+        options?.onProgress?.({
+          type: "test-complete",
+          data: result,
+        });
+
+        // Track individual test case (fire-and-forget, non-blocking)
+        this.trackTestCaseResult(result, testRunId, promptId);
+      }
+
+      if (options?.bail && executorResultsForTest.some((r) => !r.passed)) {
         break;
       }
     }
 
-    const finalResults = {
-      total: results.length,
-      passed: results.filter((r) => r.passed).length,
-      failed: results.filter((r) => !r.passed).length,
+    const finalResults: TestResults = {
+      total: allResults.length,
+      passed: allResults.filter((r) => r.passed).length,
+      failed: allResults.filter((r) => !r.passed).length,
       duration: Date.now() - startTime,
-      results,
+      results: allResults,
+      executorResults,
     };
 
     // Track test run (fire-and-forget, non-blocking)
@@ -114,15 +185,28 @@ export class PromptWithTests {
   }
 
   /**
-   * Run a single test case
+   * Run a single test case with a specific executor
    *
    * @param testCase - Test case to run
    * @param executor - Executor to use
+   * @param config - Executor configuration
+   * @param metadata - Optional executor metadata
    * @returns Evaluation result
    */
-  async runSingle(testCase: TestCase, executor: Executor): Promise<EvalResult> {
+  async runSingle(
+    testCase: TestCase,
+    executor: Executor,
+    config: ExecutorConfig,
+    metadata?: ExecutorMetadata,
+  ): Promise<EvalResult> {
     const startTime = Date.now();
     const executionId = generateExecutionId();
+
+    // Build metadata if not provided
+    const executorMetadata = metadata ?? {
+      model: extractModelName(config.model),
+      config,
+    };
 
     try {
       // Execute with timeout
@@ -145,6 +229,7 @@ export class PromptWithTests {
           error: executionResult.error,
           expected: testCase.expect,
           steps: executionResult.steps,
+          executor: executorMetadata,
         };
       }
 
@@ -162,6 +247,7 @@ export class PromptWithTests {
         execution_id: executionId,
         expected: testCase.expect,
         steps: executionResult.steps,
+        executor: executorMetadata,
       };
     } catch (error) {
       return {
@@ -172,6 +258,7 @@ export class PromptWithTests {
         execution_id: executionId,
         error: error instanceof Error ? error.message : String(error),
         expected: testCase.expect,
+        executor: executorMetadata,
       };
     }
   }
