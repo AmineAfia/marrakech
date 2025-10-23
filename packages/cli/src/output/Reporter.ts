@@ -308,4 +308,3 @@ export class Reporter {
     console.log(); // blank line
   }
 }
-

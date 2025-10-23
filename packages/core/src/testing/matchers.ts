@@ -176,4 +176,3 @@ export function createMatchError(
     : `Assertion failed\n\n${diff}`;
   return new MatchError(message, expected, actual);
 }
-

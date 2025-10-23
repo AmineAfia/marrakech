@@ -56,7 +56,7 @@ export class PromptWithTests {
   constructor(
     private prompt: PromptBuilder,
     private testCases: TestCase[],
-    private executorConfigs: ExecutorConfig[],
+    private executorConfigs: ExecutorConfig[] = [],
   ) {}
 
   /**
@@ -73,7 +73,12 @@ export class PromptWithTests {
    */
   async run(options?: TestRunOptions): Promise<TestResults> {
     // Use provided executors or fall back to constructor executors
-    const executorConfigsToUse = options?.executors ?? this.executorConfigs;
+    let executorConfigsToUse = options?.executors ?? this.executorConfigs;
+
+    // Handle single executor convenience parameter
+    if (options?.executor && !options?.executors) {
+      executorConfigsToUse = [options.executor];
+    }
 
     if (!executorConfigsToUse || executorConfigsToUse.length === 0) {
       throw new Error(
@@ -433,4 +438,3 @@ export class PromptWithTests {
     }
   }
 }
-

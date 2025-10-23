@@ -19,11 +19,20 @@ function convertZodToJsonSchema(
   seen.add(schema);
 
   try {
-    const def = schema._def as any;
+    const def = schema._def as {
+      typeName: string;
+      shape?: () => Record<string, z.ZodType>;
+      innerType?: z.ZodType;
+      options?: z.ZodType[];
+      values?: unknown[];
+      value?: unknown;
+      type?: z.ZodType;
+      [key: string]: unknown;
+    };
 
     // Handle ZodString
     if (def.typeName === "ZodString") {
-      const result: any = { type: "string" };
+      const result: Record<string, unknown> = { type: "string" };
       if (schema.description) {
         result.description = schema.description;
       }
@@ -32,7 +41,7 @@ function convertZodToJsonSchema(
 
     // Handle ZodNumber
     if (def.typeName === "ZodNumber") {
-      const result: any = { type: "number" };
+      const result: Record<string, unknown> = { type: "number" };
       if (schema.description) {
         result.description = schema.description;
       }
@@ -41,7 +50,7 @@ function convertZodToJsonSchema(
 
     // Handle ZodBoolean
     if (def.typeName === "ZodBoolean") {
-      const result: any = { type: "boolean" };
+      const result: Record<string, unknown> = { type: "boolean" };
       if (schema.description) {
         result.description = schema.description;
       }
@@ -50,9 +59,9 @@ function convertZodToJsonSchema(
 
     // Handle ZodArray
     if (def.typeName === "ZodArray") {
-      const result: any = {
+      const result: Record<string, unknown> = {
         type: "array",
-        items: convertZodToJsonSchema(def.type, seen),
+        items: convertZodToJsonSchema((def.type ?? {}) as z.ZodType, seen),
       };
       if (schema.description) {
         result.description = schema.description;
@@ -62,8 +71,8 @@ function convertZodToJsonSchema(
 
     // Handle ZodObject
     if (def.typeName === "ZodObject") {
-      const shape = def.shape();
-      const properties: Record<string, any> = {};
+      const shape = def.shape?.() ?? {};
+      const properties: Record<string, unknown> = {};
       const required: string[] = [];
 
       for (const [key, value] of Object.entries(shape)) {
@@ -75,7 +84,7 @@ function convertZodToJsonSchema(
         }
       }
 
-      const result: any = {
+      const result: Record<string, unknown> = {
         type: "object",
         properties,
       };
@@ -93,21 +102,21 @@ function convertZodToJsonSchema(
 
     // Handle ZodOptional
     if (def.typeName === "ZodOptional") {
-      return convertZodToJsonSchema(def.innerType, seen);
+      return convertZodToJsonSchema(def.innerType as z.ZodType, seen);
     }
 
     // Handle ZodNullable
     if (def.typeName === "ZodNullable") {
-      return convertZodToJsonSchema(def.innerType, seen);
+      return convertZodToJsonSchema(def.innerType as z.ZodType, seen);
     }
 
     // Handle ZodUnion
     if (def.typeName === "ZodUnion") {
-      const options = def.options.map((option: z.ZodType) =>
+      const options = (def.options ?? []).map((option: z.ZodType) =>
         convertZodToJsonSchema(option, seen),
       );
 
-      const result: any = {
+      const result: Record<string, unknown> = {
         anyOf: options,
       };
 
@@ -120,7 +129,7 @@ function convertZodToJsonSchema(
 
     // Handle ZodEnum
     if (def.typeName === "ZodEnum") {
-      const result: any = {
+      const result: Record<string, unknown> = {
         type: "string",
         enum: def.values,
       };
@@ -134,7 +143,7 @@ function convertZodToJsonSchema(
 
     // Handle ZodLiteral
     if (def.typeName === "ZodLiteral") {
-      const result: any = {
+      const result: Record<string, unknown> = {
         const: def.value,
       };
 
@@ -146,7 +155,7 @@ function convertZodToJsonSchema(
     }
 
     // Fallback for unknown types
-    const result: any = { type: "object" };
+    const result: Record<string, unknown> = { type: "object" };
     if (schema.description) {
       result.description = schema.description;
     }
@@ -160,7 +169,10 @@ function convertZodToJsonSchema(
  * Check if a Zod type is optional
  */
 function isOptional(schema: z.ZodType): boolean {
-  const def = schema._def as any;
+  const def = schema._def as {
+    typeName: string;
+    [key: string]: unknown;
+  };
   return def.typeName === "ZodOptional" || def.typeName === "ZodNullable";
 }
 

@@ -28,6 +28,8 @@ export interface EvalOptions {
   timeout?: number;
   /** Model to use for execution */
   model?: string;
+  /** Executor configuration */
+  executor?: ExecutorConfig;
 }
 
 /**
@@ -97,6 +99,8 @@ export interface TestRunOptions {
   bail?: boolean;
   /** Executor configs to use for running tests (overrides default executors) */
   executors?: ExecutorConfig[];
+  /** Single executor to use for running tests (convenience parameter) */
+  executor?: ExecutorConfig;
   /** Callback when a test starts */
   onTestStart?: (testCase: TestCase) => void;
   /** Callback when a test completes */
@@ -130,4 +134,3 @@ export interface TestRunMetadata {
   /** Git commit hash if available */
   git_commit?: string;
 }
-

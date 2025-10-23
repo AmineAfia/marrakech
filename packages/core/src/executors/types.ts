@@ -66,4 +66,3 @@ export type Executor = (
   prompt: PromptBuilder,
   input: string,
 ) => Promise<ExecutionResult>;
-

@@ -2,11 +2,12 @@
  * Tests for eval-driven development features
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { prompt } from "../src/PromptBuilder.js";
 import { match, matchPartial, formatDiff } from "../src/testing/matchers.js";
 import { PromptWithTests } from "../src/testing/PromptWithTests.js";
 import type { Executor } from "../src/executors/types.js";
+import { runWithMockExecutor } from "../src/testing/testHelpers.js";
 
 describe("Matchers", () => {
   describe("match", () => {
@@ -25,7 +26,9 @@ describe("Matchers", () => {
 
     it("should match identical objects", () => {
       expect(match({ a: 1, b: 2 }, { a: 1, b: 2 })).toBe(true);
-      expect(match({ nested: { value: "test" } }, { nested: { value: "test" } })).toBe(true);
+      expect(
+        match({ nested: { value: "test" } }, { nested: { value: "test" } }),
+      ).toBe(true);
     });
 
     it("should not match different objects", () => {
@@ -84,16 +87,23 @@ describe("Matchers", () => {
 
 describe("PromptBuilder.test()", () => {
   it("should create PromptWithTests instance", () => {
-    const p = prompt("Test prompt").test([{ input: "hello" }]);
+    const mockExecutor = { model: "mock-model" };
+    const p = prompt("Test prompt").test({
+      cases: [{ input: "hello" }],
+      executors: [mockExecutor],
+    });
 
     expect(p).toBeInstanceOf(PromptWithTests);
     expect(p.getTestCases()).toHaveLength(1);
     expect(p.getTestCases()[0].input).toBe("hello");
   });
 
-  it("should accept executor in constructor", () => {
-    const mockExecutor = vi.fn();
-    const p = prompt("Test prompt").test([{ input: "hello" }], mockExecutor as unknown as Executor);
+  it("should accept executors in options", () => {
+    const mockExecutor = { model: "mock-model" };
+    const p = prompt("Test prompt").test({
+      cases: [{ input: "hello" }],
+      executors: [mockExecutor],
+    });
 
     expect(p).toBeInstanceOf(PromptWithTests);
   });
@@ -103,8 +113,12 @@ describe("PromptBuilder.test()", () => {
       { input: "test1", expect: "output1" },
       { input: "test2", expect: "output2", name: "named test" },
     ];
+    const mockExecutor = { model: "mock-model" };
 
-    const p = prompt("Test prompt").test(testCases);
+    const p = prompt("Test prompt").test({
+      cases: testCases,
+      executors: [mockExecutor],
+    });
 
     expect(p.getTestCases()).toEqual(testCases);
   });
@@ -120,12 +134,12 @@ describe("PromptWithTests.run()", () => {
       };
     };
 
-    const p = prompt("Test prompt").test([
-      { input: "hello" },
-      { input: "world" },
-    ]);
+    const p = prompt("Test prompt").test({
+      cases: [{ input: "hello" }, { input: "world" }],
+      executors: [{ model: "mock-model" }],
+    });
 
-    const results = await p.run({ executor: mockExecutor });
+    const results = await runWithMockExecutor(p, mockExecutor);
 
     expect(results.total).toBe(2);
     expect(results.passed).toBe(2);
@@ -142,11 +156,12 @@ describe("PromptWithTests.run()", () => {
       };
     };
 
-    const p = prompt("Test prompt").test([
-      { input: "Weather in Paris", expect: { city: "Paris" } },
-    ]);
+    const p = prompt("Test prompt").test({
+      cases: [{ input: "Weather in Paris", expect: { city: "Paris" } }],
+      executors: [{ model: "mock-model" }],
+    });
 
-    const results = await p.run({ executor: mockExecutor });
+    const results = await runWithMockExecutor(p, mockExecutor);
 
     expect(results.passed).toBe(1);
     expect(results.failed).toBe(0);
@@ -161,11 +176,12 @@ describe("PromptWithTests.run()", () => {
       };
     };
 
-    const p = prompt("Test prompt").test([
-      { input: "Weather in Paris", expect: { city: "Paris" } },
-    ]);
+    const p = prompt("Test prompt").test({
+      cases: [{ input: "Weather in Paris", expect: { city: "Paris" } }],
+      executors: [{ model: "mock-model" }],
+    });
 
-    const results = await p.run({ executor: mockExecutor });
+    const results = await runWithMockExecutor(p, mockExecutor);
 
     expect(results.passed).toBe(0);
     expect(results.failed).toBe(1);
@@ -182,13 +198,16 @@ describe("PromptWithTests.run()", () => {
       };
     };
 
-    const p = prompt("Test prompt").test([
-      { input: "test1", expect: "correct" },
-      { input: "test2", expect: "correct" },
-      { input: "test3", expect: "correct" },
-    ]);
+    const p = prompt("Test prompt").test({
+      cases: [
+        { input: "test1", expect: "correct" },
+        { input: "test2", expect: "correct" },
+        { input: "test3", expect: "correct" },
+      ],
+      executors: [{ model: "mock-model" }],
+    });
 
-    const results = await p.run({ executor: mockExecutor, bail: true });
+    const results = await runWithMockExecutor(p, mockExecutor, { bail: true });
 
     expect(callCount).toBe(1); // Should stop after first failure
     expect(results.total).toBe(1);
@@ -205,9 +224,12 @@ describe("PromptWithTests.run()", () => {
       };
     };
 
-    const p = prompt("Test prompt").test([{ input: "hello" }]);
+    const p = prompt("Test prompt").test({
+      cases: [{ input: "hello" }],
+      executors: [{ model: "mock-model" }],
+    });
 
-    const results = await p.run({ executor: mockExecutor });
+    const results = await runWithMockExecutor(p, mockExecutor);
 
     expect(results.passed).toBe(0);
     expect(results.failed).toBe(1);
@@ -224,14 +246,16 @@ describe("PromptWithTests.run()", () => {
       };
     };
 
-    const p = prompt("Test prompt").test([{ input: "hello" }]);
+    const p = prompt("Test prompt").test({
+      cases: [{ input: "hello" }],
+      executors: [{ model: "mock-model" }],
+    });
 
-    const results = await p.run({ executor: mockExecutor });
+    const results = await runWithMockExecutor(p, mockExecutor);
 
     expect(results.duration).toBeGreaterThan(40);
     expect(results.results[0].duration).toBeGreaterThan(40);
   });
-
 });
 
 describe("PromptBuilder.eval()", () => {
@@ -244,10 +268,13 @@ describe("PromptBuilder.eval()", () => {
       };
     };
 
-    const result = await prompt("Translate to French").eval("Hello", {
-      executor: mockExecutor,
-      expect: "Bonjour",
+    const p = prompt("Translate to French").test({
+      cases: [{ input: "Hello", expect: "Bonjour" }],
+      executors: [{ model: "mock-model" }],
     });
+
+    const results = await runWithMockExecutor(p, mockExecutor);
+    const result = results.results[0];
 
     expect(result.passed).toBe(true);
     expect(result.output).toBe("Bonjour");
@@ -262,9 +289,13 @@ describe("PromptBuilder.eval()", () => {
       };
     };
 
-    const result = await prompt("Test").eval("input", {
-      executor: mockExecutor,
+    const p = prompt("Test").test({
+      cases: [{ input: "input" }],
+      executors: [{ model: "mock-model" }],
     });
+
+    const results = await runWithMockExecutor(p, mockExecutor);
+    const result = results.results[0];
 
     expect(result.passed).toBe(true); // Passes when no expectation
     expect(result.output).toBe("response");
@@ -278,7 +309,10 @@ describe("Integration with PromptBuilder", () => {
         description: "Test tool",
         parameters: undefined,
       })
-      .test([{ input: "hello" }]);
+      .test({
+        cases: [{ input: "hello" }],
+        executors: [{ model: "mock-model" }],
+      });
 
     expect(p).toBeInstanceOf(PromptWithTests);
     expect(p.getPrompt().tools).toHaveLength(1);
@@ -290,10 +324,12 @@ describe("Integration with PromptBuilder", () => {
 
     const p = prompt("Test")
       .output(schema)
-      .test([{ input: "hello" }]);
+      .test({
+        cases: [{ input: "hello" }],
+        executors: [{ model: "mock-model" }],
+      });
 
     expect(p).toBeInstanceOf(PromptWithTests);
     expect(p.getPrompt().outputFormat).toBeDefined();
   });
 });
-
