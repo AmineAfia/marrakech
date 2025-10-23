@@ -16,14 +16,17 @@ npx @marrakesh/cli test
 
 ### `@marrakesh/cli test [pattern]`
 
-Run tests matching the glob pattern.
+Run tests matching the glob pattern. By default, discovers all `*.prompt.ts` and `*.prompt.js` files.
 
 ```bash
-# Test all files
+# Test all prompt files (default: **/*.prompt.{ts,js})
 npx @marrakesh/cli test
 
 # Test specific directory
-npx @marrakesh/cli test "src/prompts/**/*.ts"
+npx @marrakesh/cli test "src/prompts/**/*.prompt.ts"
+
+# Custom pattern (override default)
+npx @marrakesh/cli test "src/**/*.ts"
 
 # Watch mode
 npx @marrakesh/cli test --watch
@@ -40,20 +43,33 @@ npx @marrakesh/cli test --bail
 
 ## Usage
 
-### 1. Define Tests in Your Code
+### 1. Create a Prompt File
+
+Use the `.prompt.ts` or `.prompt.js` extension for automatic discovery:
 
 ```typescript
-// src/prompts/weather.ts
-import { prompt, tool, createVercelAIExecutor } from '@marrakesh/core'
+// src/prompts/weather.prompt.ts
+import { prompt, tool } from '@marrakesh/core'
 import { openai } from '@ai-sdk/openai'
 
 export const weatherAgent = prompt('You are a weather assistant')
   .tool(getWeather)
-  .test([
-    { input: 'Weather in Paris?', expect: { city: 'Paris' } },
-    { input: 'Is it raining in Tokyo?', expect: { city: 'Tokyo' } }
-  ])
+  .test({
+    cases: [
+      { input: 'Weather in Paris?', expect: { city: 'Paris' } },
+      { input: 'Is it raining in Tokyo?', expect: { city: 'Tokyo' } }
+    ],
+    executors: [
+      { model: openai('gpt-4o') },
+      { model: openai('gpt-5') }
+    ]
+  })
 ```
+
+**File Naming Convention:**
+- Use `.prompt.ts` or `.prompt.js` extension
+- Export your prompt instances
+- CLI will automatically discover and test them
 
 ### 2. Run Tests
 

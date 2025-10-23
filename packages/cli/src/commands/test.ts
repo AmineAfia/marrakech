@@ -15,7 +15,7 @@ interface TestOptions {
 
 export const testCommand = new Command("test")
   .description("Run prompt tests")
-  .argument("[pattern]", "File pattern to test", "**/*.{ts,js}")
+  .argument("[pattern]", "File pattern to test", "**/*.prompt.{ts,js}")
   .option("-w, --watch", "Watch mode - rerun tests on file changes")
   .option("--bail", "Stop on first failure")
   .action(async (pattern: string, options: TestOptions) => {
