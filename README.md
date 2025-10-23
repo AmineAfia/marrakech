@@ -277,6 +277,28 @@ For detailed information, see [Analytics Documentation](docs/ANALYTICS.md).
 
 Test your prompts like you test code. Marrakesh provides a complete testing framework with CLI support and automatic analytics tracking.
 
+### File Convention
+
+For the CLI to automatically discover your prompts, use the `.prompt.ts` or `.prompt.js` file extension:
+
+```typescript
+// weather.prompt.ts
+import { prompt } from '@marrakesh/core'
+import { openai } from '@ai-sdk/openai'
+
+export const weatherAgent = prompt('You are a weather assistant')
+  .tool(getWeather)
+  .test({
+    cases: [
+      { input: 'Weather in Paris?', expect: { city: 'Paris' } },
+      { input: 'Is it raining in Tokyo?', expect: { city: 'Tokyo' } }
+    ],
+    executors: [
+      { model: openai('gpt-4') }
+    ]
+  })
+```
+
 ### Quick Example
 
 ```typescript
@@ -301,7 +323,7 @@ console.log(`${results.passed}/${results.total} tests passed`)
 ### CLI Usage
 
 ```bash
-# Run tests
+# Run all tests (automatically finds *.prompt.ts files)
 npx @marrakesh/cli test
 
 # Watch mode - reruns on file changes
@@ -309,6 +331,9 @@ npx @marrakesh/cli test --watch
 
 # Stop on first failure
 npx @marrakesh/cli test --bail
+
+# Custom pattern (override default)
+npx @marrakesh/cli test "src/**/*.ts"
 ```
 
 ### Features
@@ -335,6 +360,7 @@ This ensures full compatibility with `convertToModelMessages()` output.
 - **[Basic Usage](examples/basic-usage.ts)** - Simple prompt building
 - **[Tool Integration](examples/tool-integration.ts)** - Tools with Zod schemas  
 - **[Vercel AI SDK](examples/vercel-integration.ts)** - Full integration example
+- **[Prompt Testing](examples/eval-example.prompt.ts)** - Testable prompts with the CLI
 
 ## Development
 

@@ -4,13 +4,16 @@ Test your prompts like you test code. Marrakesh provides a complete testing fram
 
 ## Quick Start
 
-### 1. Add Tests to Your Prompts
+### 1. Create a Prompt File
+
+Use the `.prompt.ts` or `.prompt.js` extension for automatic CLI discovery:
 
 ```typescript
+// weather.prompt.ts
 import { prompt, tool } from '@marrakesh/core'
 import { openai } from '@ai-sdk/openai'
 
-const weatherAgent = prompt('You are a weather assistant')
+export const weatherAgent = prompt('You are a weather assistant')
   .tool(getWeather)
   .test({
     cases: [
@@ -23,11 +26,19 @@ const weatherAgent = prompt('You are a weather assistant')
   })
 ```
 
+**File Naming Convention:**
+- Name your files with `.prompt.ts` or `.prompt.js` extension
+- Export your prompt instances (e.g., `export const weatherAgent = ...`)
+- The CLI will automatically discover all `*.prompt.{ts,js}` files
+
 ### 2. Run Tests
 
 ```bash
-# Run tests once
+# Run all tests (automatically finds *.prompt.ts files)
 npx @marrakesh/cli test
+
+# Custom pattern (override default)
+npx @marrakesh/cli test "src/**/*.ts"
 
 # Watch mode - reruns on changes
 npx @marrakesh/cli test --watch
@@ -228,14 +239,17 @@ const customExecutor: Executor = async (prompt, input, config) => {
 
 ### `@marrakesh/cli test [pattern]`
 
-Run tests matching the glob pattern.
+Run tests matching the glob pattern. Default: `**/*.prompt.{ts,js}`
 
 ```bash
-# Test all files
+# Test all prompt files (uses default pattern)
 npx @marrakesh/cli test
 
 # Test specific directory
-npx @marrakesh/cli test "src/prompts/**/*.ts"
+npx @marrakesh/cli test "src/prompts/**/*.prompt.ts"
+
+# Custom pattern (override default)
+npx @marrakesh/cli test "src/**/*.ts"
 
 # Test with options
 npx @marrakesh/cli test --watch
@@ -244,6 +258,9 @@ npx @marrakesh/cli test --watch
 **Options:**
 - `-w, --watch`: Watch mode
 - `--bail`: Stop on first failure
+
+**Pattern Discovery:**
+The CLI defaults to `**/*.prompt.{ts,js}` to automatically discover prompt files. You can override this by providing a custom pattern argument.
 
 ## Test Patterns
 
@@ -431,14 +448,19 @@ npx @marrakesh/cli test --watch
 
 ## Best Practices
 
-### 1. Co-locate Tests with Prompts
+### 1. Use the `.prompt.ts` Convention
 
 ```typescript
-// src/prompts/weather.ts
+// src/prompts/weather.prompt.ts
 export const weatherAgent = prompt('...')
   .tool(getWeather)
-  .test([...])
+  .test({
+    cases: [...],
+    executors: [...]
+  })
 ```
+
+This makes your prompts automatically discoverable by the CLI.
 
 ### 2. Use Descriptive Test Names
 
