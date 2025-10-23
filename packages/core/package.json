@@ -2,6 +2,7 @@
 "name": "@marrakesh/core",
 "version": "0.1.0-alpha.2",
 "description": "Minimal, type-safe tool integration for LLMs",
+"license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
