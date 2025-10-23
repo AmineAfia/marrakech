@@ -50,7 +50,9 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
 
       // Get the tool descriptions from the tools object
       const toolDescriptions = tools
-        ? Object.values(tools).map((t: any) => t.description)
+        ? Object.values(tools).map(
+            (t: { description: string }) => t.description,
+          )
         : [];
 
       // Execute with tool calling loop using Promise.race for timeout

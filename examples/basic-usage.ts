@@ -7,7 +7,7 @@ const p = prompt("You are a helpful customer service agent")
 
 // Compile for different providers
 console.log("=== Generic Format ===");
-console.log(p["systemPrompt"]);
+console.log(p.systemPrompt);
 
 console.log("\n=== OpenAI Format ===");
 const openaiResult = p.toOpenAI();

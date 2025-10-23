@@ -103,7 +103,7 @@ describe('AnalyticsClient', () => {
     mockFetch.mockClear();
     process.env = { ...originalEnv };
     // Reset singleton
-    (AnalyticsClient as any).instance = null;
+    (AnalyticsClient as { instance: unknown }).instance = null;
   });
 
   afterEach(() => {
@@ -112,7 +112,7 @@ describe('AnalyticsClient', () => {
 
   describe('initialization', () => {
     it('should not track when API key is missing', () => {
-      delete process.env.MARRAKESH_API_KEY;
+      process.env.MARRAKESH_API_KEY = undefined;
       const client = AnalyticsClient.getInstance();
       
       // Should not throw and should be no-op
@@ -261,7 +261,7 @@ describe('AnalyticsClient', () => {
       process.env.MARRAKESH_API_KEY = "test-key";
 
       // Reset singleton to pick up new env var
-      (AnalyticsClient as any).instance = null;
+      (AnalyticsClient as { instance: unknown }).instance = null;
       const client = AnalyticsClient.getInstance();
 
       client.trackPromptMetadata({
@@ -314,7 +314,7 @@ describe('AnalyticsClient', () => {
       const client = AnalyticsClient.getInstance();
 
       // Create circular reference to cause JSON error
-      const circular: any = { test: "value" };
+      const circular: Record<string, unknown> = { test: "value" };
       circular.self = circular;
 
       client.trackPromptMetadata({
