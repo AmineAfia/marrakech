@@ -3,6 +3,7 @@
     "private": true,
     "version": "0.1.0-alpha.2",
     "description": "A structured, testable, and data-driven context engineering SDK",
+    "license": "Apache-2.0",
     "scripts": {
         "build": "turbo build",
         "dev": "turbo dev",
