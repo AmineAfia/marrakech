@@ -143,14 +143,37 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
         output = resultObj.text || "";
       }
 
+      // Extract usage information with better error handling
+      let usage: ExecutionResult["usage"] | undefined;
+
+      if (resultObj.usage) {
+        const usageObj = resultObj.usage as Record<string, unknown>;
+
+        // Support both AI SDK 5.0 format (inputTokens/outputTokens) and legacy format (promptTokens/completionTokens)
+        usage = {
+          promptTokens:
+            typeof usageObj.inputTokens === "number"
+              ? usageObj.inputTokens
+              : typeof usageObj.promptTokens === "number"
+                ? usageObj.promptTokens
+                : 0,
+          completionTokens:
+            typeof usageObj.outputTokens === "number"
+              ? usageObj.outputTokens
+              : typeof usageObj.completionTokens === "number"
+                ? usageObj.completionTokens
+                : 0,
+          totalTokens:
+            typeof usageObj.totalTokens === "number" ? usageObj.totalTokens : 0,
+        };
+      }
+
       return {
         output,
         steps,
         finishReason: (result as { finishReason: string })
           .finishReason as ExecutionResult["finishReason"],
-        usage: (result as { usage?: unknown }).usage as
-          | ExecutionResult["usage"]
-          | undefined,
+        usage,
       };
     } catch (error) {
       // Handle timeout or other errors

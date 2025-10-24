@@ -5,8 +5,8 @@
 import chalk from "chalk";
 import ora from "ora";
 import type { RunnerResults } from "../runner/TestRunner.js";
-import type { EvalResult } from "@marrakesh/core";
-import { formatDuration, formatDiff } from "./formatters.js";
+import type { EvalResult, ExecutionStep } from "@marrakesh/core";
+import { formatDuration, formatDiff, createBarChart } from "./formatters.js";
 
 /**
  * Extract tool names used from execution steps
@@ -155,25 +155,100 @@ export class Reporter {
 
       console.log();
 
-      // Print executor summary
-      console.log(chalk.bold("Executor Summary:"));
-      for (const executorName of executorNames) {
-        const executorResult = testResults.executorResults[executorName];
-        const total = executorResult.passed + executorResult.failed;
-        const passRate =
-          total > 0
-            ? ((executorResult.passed / total) * 100).toFixed(1)
-            : "0.0";
-        const color = executorResult.failed === 0 ? chalk.green : chalk.red;
+      if (executorNames.length > 1) {
+        // Display token usage bar chart for multi-executor comparison
+        console.log(chalk.bold("Token Usage Comparison:"));
 
-        console.log(
-          color(
-            `  ${executorName}: ${executorResult.passed}/${total} passed (${passRate}%)`,
-          ),
-        );
+        // Prepare data for bar chart with input/output token breakdown
+        const tokenData = executorNames.map((name) => {
+          const executorResult = testResults.executorResults?.[name];
+          if (!executorResult) {
+            return {
+              label: name,
+              value: 0,
+              color: "gray",
+              formatValue: (value: number) =>
+                `${value.toLocaleString()} (0 in / 0 out)`,
+            };
+          }
+
+          const executorUsage = executorResult.results.reduce(
+            (
+              acc: {
+                totalTokens: number;
+                promptTokens: number;
+                completionTokens: number;
+              },
+              result: EvalResult,
+            ) => {
+              if (result.usage) {
+                acc.totalTokens += result.usage.totalTokens;
+                acc.promptTokens += result.usage.promptTokens;
+                acc.completionTokens += result.usage.completionTokens;
+              }
+              return acc;
+            },
+            { totalTokens: 0, promptTokens: 0, completionTokens: 0 },
+          );
+
+          // Use red color if there are failed tests, gray otherwise
+          const hasFailures = executorResult.failed > 0;
+          const color = hasFailures ? "red" : "gray";
+
+          return {
+            label: name,
+            value: executorUsage.totalTokens,
+            color,
+            formatValue: (value: number) =>
+              `${value.toLocaleString()} (${executorUsage.promptTokens} in / ${executorUsage.completionTokens} out)`,
+          };
+        });
+
+        // Display bar chart
+        const chart = createBarChart(tokenData, 40);
+        for (const line of chart) {
+          console.log(line);
+        }
+
+        // Add latency comparison chart
+        console.log();
+        console.log(chalk.bold("Latency Comparison:"));
+        const latencyData = executorNames.map((name) => {
+          const executorResult = testResults.executorResults?.[name];
+          if (!executorResult) {
+            return { label: name, value: 0, color: "gray" };
+          }
+
+          // Calculate average latency for this executor
+          const totalDuration = executorResult.results.reduce(
+            (acc: number, result: EvalResult) => {
+              return acc + result.duration;
+            },
+            0,
+          );
+          const averageLatency =
+            executorResult.results.length > 0
+              ? totalDuration / executorResult.results.length
+              : 0;
+
+          // Use red color if there are failed tests, white otherwise
+          const hasFailures = executorResult.failed > 0;
+          const color = hasFailures ? "red" : "white";
+
+          return {
+            label: name,
+            value: averageLatency,
+            color,
+            formatValue: (value: number) => formatDuration(value),
+          };
+        });
+
+        const latencyChart = createBarChart(latencyData, 40);
+        for (const line of latencyChart) {
+          console.log(line);
+        }
+        console.log();
       }
-
-      console.log();
     }
 
     // Print overall summary

@@ -174,6 +174,19 @@ export class PromptWithTests {
       }
     }
 
+    // Calculate total usage across all results
+    const totalUsage = allResults.reduce(
+      (acc, result) => {
+        if (result.usage) {
+          acc.promptTokens += result.usage.promptTokens;
+          acc.completionTokens += result.usage.completionTokens;
+          acc.totalTokens += result.usage.totalTokens;
+        }
+        return acc;
+      },
+      { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    );
+
     const finalResults: TestResults = {
       total: allResults.length,
       passed: allResults.filter((r) => r.passed).length,
@@ -181,6 +194,7 @@ export class PromptWithTests {
       duration: Date.now() - startTime,
       results: allResults,
       executorResults,
+      totalUsage: totalUsage.totalTokens > 0 ? totalUsage : undefined,
     };
 
     // Track test run (fire-and-forget, non-blocking)
@@ -234,6 +248,7 @@ export class PromptWithTests {
           error: executionResult.error,
           expected: testCase.expect,
           steps: executionResult.steps,
+          usage: executionResult.usage,
           executor: executorMetadata,
         };
       }
@@ -252,6 +267,7 @@ export class PromptWithTests {
         execution_id: executionId,
         expected: testCase.expect,
         steps: executionResult.steps,
+        usage: executionResult.usage,
         executor: executorMetadata,
       };
     } catch (error) {

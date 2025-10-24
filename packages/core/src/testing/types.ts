@@ -62,6 +62,12 @@ export interface EvalResult {
   expected?: unknown;
   /** Execution steps including tool calls */
   steps?: ExecutionStep[];
+  /** Token usage information */
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
   /** Executor metadata (model and config) */
   executor?: ExecutorMetadata;
 }
@@ -89,6 +95,12 @@ export interface TestResults {
       results: EvalResult[];
     }
   >;
+  /** Aggregated token usage across all tests */
+  totalUsage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 /**
