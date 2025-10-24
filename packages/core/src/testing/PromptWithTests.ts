@@ -287,7 +287,7 @@ export class PromptWithTests {
    * Delegates to the underlying PromptBuilder
    *
    * @param messages - Array of conversation messages
-   * @returns Vercel AI SDK compatible format with messages, tools, and responseFormat
+   * @returns Vercel AI SDK compatible format with messages and tools
    *
    * @example
    * ```typescript
@@ -311,10 +311,6 @@ export class PromptWithTests {
         execute?: (input: unknown, context?: unknown) => Promise<unknown>;
       }
     >;
-    responseFormat?: {
-      type: "json_schema";
-      json_schema: { name: string; strict: boolean; schema: object };
-    };
   } {
     return this.prompt.toVercelAI(messages);
   }
@@ -324,7 +320,7 @@ export class PromptWithTests {
    * Delegates to the underlying PromptBuilder
    *
    * @param messages - Array of conversation messages
-   * @returns OpenAI API compatible format with messages, tools, and response_format
+   * @returns OpenAI API compatible format with messages and tools
    *
    * @example
    * ```typescript
@@ -340,10 +336,6 @@ export class PromptWithTests {
   toOpenAI(messages: Message[] = []): {
     messages: Message[];
     tools?: Array<{ name: string; description: string; parameters: object }>;
-    response_format?: {
-      type: "json_schema";
-      json_schema: { name: string; strict: boolean; schema: object };
-    };
   } {
     return this.prompt.toOpenAI(messages);
   }

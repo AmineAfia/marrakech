@@ -32,13 +32,9 @@ const getWeather = tool({
   })
 });
 
-// Create prompt with tools and structured output
+// Create prompt with tools
 const p = prompt('You are a helpful weather assistant')
-  .tool(getWeather)
-  .output(z.object({
-    temperature: z.number(),
-    conditions: z.string()
-  }));
+  .tool(getWeather);
 
 // Use with Vercel AI SDK
 export async function POST(req: Request) {
@@ -142,35 +138,15 @@ The SDK keeps your system prompt clean by handling tools and structured output s
 **Your code:**
 ```typescript
 const p = prompt('You are a helpful weather assistant')
-  .tool(getWeather)
-  .output(z.object({
-    temperature: z.number(),
-    conditions: z.string()
-  }));
+  .tool(getWeather);
 ```
 
 **Vercel AI SDK / OpenAI:**
 - System prompt: `"You are a helpful weather assistant"`
 - Tools: Passed as separate `tools` parameter (Record format with `inputSchema`)
-- Response format: Passed as `responseFormat` parameter
 
 **Anthropic:**
-- System prompt: 
-```
-You are a helpful weather assistant
-
-<output_format>
-Respond with valid JSON matching this schema:
-{
-  "type": "object",
-  "properties": {
-    "temperature": { "type": "number" },
-    "conditions": { "type": "string" }
-  },
-  "required": ["temperature", "conditions"]
-}
-</output_format>
-```
+- System prompt: `"You are a helpful weather assistant"`
 
 The key insight: **your system prompt stays clean and focused on behavior**, while technical details (tools, schemas) are handled by the API integration layer.
 
@@ -209,23 +185,13 @@ const myTools = [getWeather, getLocation];
 p.tools(myTools);
 ```
 
-### `.output(schema: z.ZodType)`
-
-Set structured JSON output.
-
-```typescript
-p.output(z.object({
-  answer: z.string(),
-  confidence: z.number()
-}));
-```
 
 ### `.toVercelAI(messages?: CoreMessage[])`
 
 Convert to Vercel AI SDK format.
 
 ```typescript
-const { messages, tools, responseFormat } = p.toVercelAI();
+const { messages, tools } = p.toVercelAI();
 ```
 
 ### `.toOpenAI(messages?: CoreMessage[])`
@@ -233,7 +199,7 @@ const { messages, tools, responseFormat } = p.toVercelAI();
 Convert to OpenAI format.
 
 ```typescript
-const { messages, tools, response_format } = p.toOpenAI();
+const { messages, tools } = p.toOpenAI();
 ```
 
 ### `.toAnthropic()`

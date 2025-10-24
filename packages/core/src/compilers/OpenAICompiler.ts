@@ -12,10 +12,6 @@ export function toOpenAI(
 ): {
   messages: CoreMessage[];
   tools?: Array<{ name: string; description: string; parameters: object }>;
-  response_format?: {
-    type: "json_schema";
-    json_schema: { name: string; strict: boolean; schema: object };
-  };
 } {
   const systemMessage: CoreMessage = {
     role: "system",
@@ -34,24 +30,8 @@ export function toOpenAI(
     };
   });
 
-  // Get response format
-  const outputFormat = promptBuilder.outputFormat;
-  let response_format = undefined;
-
-  if (outputFormat?.type === "json" && outputFormat.schema) {
-    response_format = {
-      type: "json_schema" as const,
-      json_schema: {
-        name: "response",
-        strict: true,
-        schema: zodToJsonSchema(outputFormat.schema),
-      },
-    };
-  }
-
   return {
     messages: allMessages,
     tools: tools.length > 0 ? tools : undefined,
-    response_format,
   };
 }

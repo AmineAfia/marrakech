@@ -74,32 +74,3 @@ export async function runSingleEval() {
   console.log("Eval result:", result);
   return result;
 }
-
-// Example: Structured output with tests
-const emailSchema = z.object({
-  subject: z.string(),
-  tone: z.enum(["formal", "casual", "friendly"]),
-  hasGreeting: z.boolean(),
-});
-
-export const emailWriter = prompt(
-  "You are an email writing assistant. Extract email properties.",
-)
-  .output(emailSchema)
-  .test({
-    cases: [
-      {
-        input: "Write a professional email about a meeting",
-        expect: { tone: "formal" },
-      },
-      {
-        input: "Send a casual message to my friend",
-        expect: { tone: "casual" },
-      },
-    ],
-    executors: [
-      {
-        model: openai("gpt-4"),
-      },
-    ],
-  });

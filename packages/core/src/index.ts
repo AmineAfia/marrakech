@@ -62,7 +62,6 @@ export type {
 export type {
   CoreMessage,
   ToolFunction,
-  OutputFormat,
   Message,
   ModelMessage,
   UserModelMessage,

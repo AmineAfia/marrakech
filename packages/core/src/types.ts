@@ -127,10 +127,3 @@ export interface ToolFunction {
   inputSchema?: z.ZodType; // AI SDK v5 format
   execute?: (...args: unknown[]) => Promise<unknown>;
 }
-
-// Output format for structured responses
-export interface OutputFormat {
-  type: "text" | "json";
-  schema?: z.ZodType; // For structured JSON output
-  instruction?: string; // Custom formatting instruction
-}
