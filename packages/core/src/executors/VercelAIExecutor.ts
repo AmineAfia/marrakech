@@ -44,7 +44,7 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
       const { generateText } = await import("ai");
 
       // Convert prompt to Vercel AI format
-      const { messages, tools, responseFormat } = prompt.toVercelAI([
+      const { messages, tools } = prompt.toVercelAI([
         { role: "user", content: input },
       ]);
 
@@ -116,53 +116,31 @@ export function createVercelAIExecutor(config: ExecutorConfig): Executor {
       let output: unknown;
       const resultObj = result as Record<string, unknown>;
 
-      if (responseFormat?.type === "json_schema") {
-        // Check if we expect structured output
-        // Try to parse JSON from the model's text response
-        if (resultObj.text && typeof resultObj.text === "string") {
-          const trimmedText = resultObj.text.trim();
-          if (trimmedText) {
-            try {
-              output = JSON.parse(trimmedText);
-            } catch (parseError) {
-              // If JSON parsing fails, return the raw text
-              output = trimmedText;
-            }
-          } else {
-            output = "";
-          }
-        } else {
-          // No text response, return empty string
-          output = "";
+      // Text output - but check if we have tool results instead
+      if (resultObj.text) {
+        output = resultObj.text;
+      } else if (
+        resultObj.toolResults &&
+        Array.isArray(resultObj.toolResults) &&
+        resultObj.toolResults.length > 0
+      ) {
+        // If we have tool results, use the last one as output
+        const lastToolResult = resultObj.toolResults[
+          resultObj.toolResults.length - 1
+        ] as Record<string, unknown>;
+        output = lastToolResult.result || lastToolResult.output;
+      } else if (
+        resultObj.toolCalls &&
+        Array.isArray(resultObj.toolCalls) &&
+        resultObj.toolCalls.length > 0
+      ) {
+        // If we have tool calls but no results, extract from steps
+        const lastStep = steps[steps.length - 1];
+        if (lastStep?.toolCalls && lastStep.toolCalls.length > 0) {
+          output = lastStep.toolCalls[lastStep.toolCalls.length - 1].output;
         }
       } else {
-        // Text output - but check if we have tool results instead
-        const resultObj = result as Record<string, unknown>;
-        if (resultObj.text) {
-          output = resultObj.text;
-        } else if (
-          resultObj.toolResults &&
-          Array.isArray(resultObj.toolResults) &&
-          resultObj.toolResults.length > 0
-        ) {
-          // If we have tool results, use the last one as output
-          const lastToolResult = resultObj.toolResults[
-            resultObj.toolResults.length - 1
-          ] as Record<string, unknown>;
-          output = lastToolResult.result || lastToolResult.output;
-        } else if (
-          resultObj.toolCalls &&
-          Array.isArray(resultObj.toolCalls) &&
-          resultObj.toolCalls.length > 0
-        ) {
-          // If we have tool calls but no results, extract from steps
-          const lastStep = steps[steps.length - 1];
-          if (lastStep?.toolCalls && lastStep.toolCalls.length > 0) {
-            output = lastStep.toolCalls[lastStep.toolCalls.length - 1].output;
-          }
-        } else {
-          output = resultObj.text || "";
-        }
+        output = resultObj.text || "";
       }
 
       return {

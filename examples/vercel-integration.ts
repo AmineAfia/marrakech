@@ -24,47 +24,13 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
 
     // Convert to Vercel AI SDK format
-    const {
-      messages: messagesWithSystem,
-      tools,
-      responseFormat,
-    } = p.toVercelAI(messages);
+    const { messages: messagesWithSystem, tools } = p.toVercelAI(messages);
 
     // Use with Vercel AI SDK streaming
     return streamText({
       model: openai("gpt-4"),
       messages: messagesWithSystem,
       tools: tools,
-      responseFormat: responseFormat,
-      toolChoice: "auto",
-    });
-  } catch (error) {
-    console.error("Chat API error:", error);
-    return new Response("Internal Server Error", { status: 500 });
-  }
-}
-
-// Example with structured output
-const pWithOutput = prompt("You are a helpful weather assistant")
-  .tool(getWeather)
-  .output(
-    z.object({
-      temperature: z.number(),
-      conditions: z.string(),
-      location: z.string(),
-    }),
-  );
-
-export async function POSTWithStructuredOutput(req: Request) {
-  try {
-    const { messages } = await req.json();
-
-    // This will include responseFormat for structured JSON output
-    const result = pWithOutput.toVercelAI(messages);
-
-    return streamText({
-      model: openai("gpt-4"),
-      ...result,
       toolChoice: "auto",
     });
   } catch (error) {

@@ -317,19 +317,4 @@ describe("Integration with PromptBuilder", () => {
     expect(p).toBeInstanceOf(PromptWithTests);
     expect(p.getPrompt().tools).toHaveLength(1);
   });
-
-  it("should work with output format", () => {
-    const { z } = require("zod");
-    const schema = z.object({ name: z.string() });
-
-    const p = prompt("Test")
-      .output(schema)
-      .test({
-        cases: [{ input: "hello" }],
-        executors: [{ model: "mock-model" }],
-      });
-
-    expect(p).toBeInstanceOf(PromptWithTests);
-    expect(p.getPrompt().outputFormat).toBeDefined();
-  });
 });

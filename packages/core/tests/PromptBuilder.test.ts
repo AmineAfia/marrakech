@@ -41,20 +41,6 @@ describe("PromptBuilder", () => {
     );
   });
 
-  it("should handle structured output", () => {
-    const p = prompt("You are a helpful assistant").output(
-      z.object({
-        answer: z.string(),
-        confidence: z.number(),
-      }),
-    );
-
-    const result = p.toVercelAI();
-
-    expect(result.responseFormat).toBeDefined();
-    expect(result.responseFormat?.type).toBe("json_schema");
-  });
-
   it("should convert to different providers", () => {
     const p = prompt("You are a helpful assistant");
 

@@ -9,17 +9,7 @@ export function toAnthropic(promptBuilder: PromptBuilder): {
   system: string;
   tools?: Array<{ name: string; description: string; parameters: object }>;
 } {
-  let systemPrompt = promptBuilder.systemPrompt;
-
-  // Add output format instructions for Anthropic (no native structured outputs)
-  const outputFormat = promptBuilder.outputFormat;
-  if (outputFormat && outputFormat.type === "json" && outputFormat.schema) {
-    const jsonSchema = zodToJsonSchema(outputFormat.schema);
-    systemPrompt += `\n\n<output_format>
-Respond with valid JSON matching this schema:
-${JSON.stringify(jsonSchema, null, 2)}
-</output_format>`;
-  }
+  const systemPrompt = promptBuilder.systemPrompt;
 
   // Get tools
   const tools = promptBuilder.toolsList.map((tool) => {

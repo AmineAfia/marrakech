@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { ToolFunction, OutputFormat, Message } from "./types.js";
+import type { ToolFunction, Message } from "./types.js";
 import { extractToolMetadata } from "./tools/tool.js";
 import { zodToJsonSchema } from "./schema/zodToJsonSchema.js";
 import { AnalyticsClient } from "./analytics/AnalyticsClient.js";
@@ -21,7 +21,6 @@ import { createVercelAIExecutor } from "./executors/index.js";
 export class PromptBuilder {
   public systemPrompt: string;
   private _tools: ToolFunction[] = [];
-  public outputFormat?: OutputFormat;
 
   /**
    * Get the current tools array
@@ -64,14 +63,6 @@ export class PromptBuilder {
    */
   tools(tools: ToolFunction[]): this {
     this._tools.push(...tools);
-    return this;
-  }
-
-  /**
-   * Set structured JSON output with Zod schema
-   */
-  output(schema: z.ZodType): this {
-    this.outputFormat = { type: "json", schema };
     return this;
   }
 
@@ -265,33 +256,6 @@ export class PromptBuilder {
   }
 
   /**
-   * Get response format for OpenAI
-   */
-  private getResponseFormat():
-    | {
-        type: "json_schema";
-        json_schema: { name: string; strict: boolean; schema: object };
-      }
-    | undefined {
-    if (
-      !this.outputFormat ||
-      this.outputFormat.type !== "json" ||
-      !this.outputFormat.schema
-    ) {
-      return undefined;
-    }
-
-    return {
-      type: "json_schema" as const,
-      json_schema: {
-        name: "response",
-        strict: true,
-        schema: zodToJsonSchema(this.outputFormat.schema),
-      },
-    };
-  }
-
-  /**
    * Convert to Vercel AI SDK format
    */
   toVercelAI(messages: Message[] = []): {
@@ -305,10 +269,6 @@ export class PromptBuilder {
         execute?: (input: unknown, context?: unknown) => Promise<unknown>;
       }
     >;
-    responseFormat?: {
-      type: "json_schema";
-      json_schema: { name: string; strict: boolean; schema: object };
-    };
   } {
     const executionId = generateExecutionId();
     const toolNames = this._tools.map(
@@ -327,22 +287,12 @@ export class PromptBuilder {
       content: this.systemPrompt,
     };
 
-    // Add output format instructions if schema is defined
-    if (this.outputFormat?.type === "json" && this.outputFormat.schema) {
-      const jsonSchema = zodToJsonSchema(this.outputFormat.schema);
-      systemMessage.content += `\n\n<output_format>
-Respond with valid JSON matching this schema:
-${JSON.stringify(jsonSchema, null, 2)}
-</output_format>`;
-    }
-
     const allMessages = [systemMessage, ...messages];
     const tools = this.getToolsForVercelAI(executionId, promptId);
 
     return {
       messages: allMessages,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
-      responseFormat: this.getResponseFormat(),
     };
   }
 
@@ -352,10 +302,6 @@ ${JSON.stringify(jsonSchema, null, 2)}
   toOpenAI(messages: Message[] = []): {
     messages: Message[];
     tools?: Array<{ name: string; description: string; parameters: object }>;
-    response_format?: {
-      type: "json_schema";
-      json_schema: { name: string; strict: boolean; schema: object };
-    };
   } {
     const executionId = generateExecutionId();
     const toolNames = this._tools.map(
@@ -376,12 +322,10 @@ ${JSON.stringify(jsonSchema, null, 2)}
 
     const allMessages = [systemMessage, ...messages];
     const tools = this.getToolsForAPI();
-    const response_format = this.getResponseFormat();
 
     return {
       messages: allMessages,
       tools: tools.length > 0 ? tools : undefined,
-      response_format,
     };
   }
 
@@ -404,20 +348,7 @@ ${JSON.stringify(jsonSchema, null, 2)}
     // Track prompt execution (no messages for Anthropic)
     this.trackPromptExecution(executionId, promptId, []);
 
-    let systemPrompt = this.systemPrompt;
-
-    // Add output format instructions for Anthropic (no native structured outputs)
-    if (
-      this.outputFormat &&
-      this.outputFormat.type === "json" &&
-      this.outputFormat.schema
-    ) {
-      const jsonSchema = zodToJsonSchema(this.outputFormat.schema);
-      systemPrompt += `\n\n<output_format>
-Respond with valid JSON matching this schema:
-${JSON.stringify(jsonSchema, null, 2)}
-</output_format>`;
-    }
+    const systemPrompt = this.systemPrompt;
 
     const tools = this.getToolsForAPI();
 
