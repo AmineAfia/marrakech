@@ -19,6 +19,12 @@ export interface RunnerResults {
     promptName: string;
     results: TestResults;
   }>;
+  /** Aggregated token usage across all tests */
+  totalUsage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 /**
@@ -183,12 +189,27 @@ export class TestRunner {
     const passed = promptResults.reduce((sum, r) => sum + r.results.passed, 0);
     const failed = promptResults.reduce((sum, r) => sum + r.results.failed, 0);
 
+    // Calculate total usage across all prompt results
+    const totalUsage = promptResults.reduce(
+      (acc, promptResult) => {
+        if (promptResult.results.totalUsage) {
+          acc.promptTokens += promptResult.results.totalUsage.promptTokens;
+          acc.completionTokens +=
+            promptResult.results.totalUsage.completionTokens;
+          acc.totalTokens += promptResult.results.totalUsage.totalTokens;
+        }
+        return acc;
+      },
+      { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    );
+
     const finalResults = {
       total,
       passed,
       failed,
       duration: Date.now() - startTime,
       promptResults,
+      totalUsage: totalUsage.totalTokens > 0 ? totalUsage : undefined,
     };
 
     return finalResults;

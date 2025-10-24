@@ -2,6 +2,7 @@
  * Formatters - Utility functions for formatting output
  */
 
+import chalk from "chalk";
 import type { TestResults } from "@marrakesh/core";
 
 /**
@@ -57,4 +58,37 @@ export function formatError(error: Error): string {
   }
 
   return output;
+}
+
+/**
+ * Generate a horizontal bar chart for comparison
+ * @param data - Array of { label, value, color, formatValue? } objects
+ * @param maxWidth - Maximum width of the bar in characters
+ * @returns Formatted bar chart string
+ */
+export function createBarChart(
+  data: Array<{
+    label: string;
+    value: number;
+    color?: string;
+    formatValue?: (value: number) => string;
+  }>,
+  maxWidth = 40,
+): string[] {
+  const maxValue = Math.max(...data.map((d) => d.value));
+  if (maxValue === 0) return [];
+
+  return data.map(({ label, value, color, formatValue }) => {
+    const barLength = Math.round((value / maxValue) * maxWidth);
+    // Use gradient character (▓) for 3D effect instead of solid block (█)
+    const bar = "▓".repeat(barLength);
+    const spaces = " ".repeat(maxWidth - barLength);
+    const percentage = ((value / maxValue) * 100).toFixed(0);
+
+    const coloredBar = color ? chalk[color](bar) : bar;
+    const displayValue = formatValue
+      ? formatValue(value)
+      : value.toLocaleString();
+    return `  ${label.padEnd(15)} ${coloredBar}${spaces} ${displayValue} (${percentage}%)`;
+  });
 }
